@@ -1,0 +1,47 @@
+[build-system]
+requires      = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name        = "xauusd-trading-system"
+version     = "1.0.0"
+description = "Production-grade systematic trend-following system for XAU/USD"
+requires-python = ">=3.12"
+
+dependencies = [
+    "aiohttp>=3.9",
+    "numpy>=1.26",
+    "prometheus-client>=0.19",
+    "python-dotenv>=1.0",
+    "websockets>=12.0",
+    "uvicorn[standard]>=0.29",
+    "fastapi>=0.110",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=4.1",
+    "mypy>=1.7",
+    "ruff>=0.1",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths    = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.mypy]
+python_version         = "3.12"
+strict                 = true
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+select = ["E", "F", "I", "N", "W", "UP"]

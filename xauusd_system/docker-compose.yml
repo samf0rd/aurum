@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  aurum:
+    build: .
+    container_name: aurum
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"   # localhost only — nginx proxies HTTPS to here
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - DB_PATH=/app/data/trading.db
+      - STRATEGY_PROFILE=${STRATEGY_PROFILE:-intraday}

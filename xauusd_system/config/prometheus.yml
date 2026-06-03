@@ -1,0 +1,9 @@
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+scrape_configs:
+  - job_name: xauusd_trader
+    static_configs:
+      - targets: ["trader:8000"]
+    metrics_path: /metrics

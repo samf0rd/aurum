@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>XAU/USD · Donchian Breakout · Paper</title>
+<script src="https://unpkg.com/lightweight-charts@5.0.7/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+  /* ============ DESIGN TOKENS ============ */
+  :root{
+    --bg:#0a0c10;
+    --bg-elev:#11141b;
+    --bg-card:#13171f;
+    --bg-card-hover:#161b24;
+    --line:#1e2530;
+    --line-soft:#171c25;
+    --ink:#e8eaed;
+    --ink-dim:#9aa3b0;
+    --ink-faint:#5c6675;
+    --gold:#f5b133;
+    --gold-soft:rgba(245,177,51,0.10);
+    --green:#26d07c;
+    --green-soft:rgba(38,208,124,0.10);
+    --red:#ff5468;
+    --red-soft:rgba(255,84,104,0.10);
+    --blue:#3b9dff;
+    --purple:#9d7bff;
+    --cyan:#1fd6c9;
+    --radius:12px;
+    --radius-sm:8px;
+    --mono:'DM Mono','SF Mono',ui-monospace,'JetBrains Mono',Menlo,monospace;
+    --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    --maxw:1480px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;font-size:14px;line-height:1.45}
+  body{
+    background:
+      radial-gradient(1100px 600px at 78% -8%, rgba(245,177,51,0.05), transparent 60%),
+      radial-gradient(900px 500px at 12% 4%, rgba(59,157,255,0.035), transparent 55%),
+      var(--bg);
+    min-height:100vh;
+  }
+  a{color:inherit;text-decoration:none}
+  .mono{font-family:var(--mono);font-feature-settings:"tnum" 1}
+  .pos{color:var(--green)} .neg{color:var(--red)} .gold{color:var(--gold)} .dim{color:var(--ink-dim)} .faint{color:var(--ink-faint)}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 22px}
+
+  /* ============ HEADER ============ */
+  header{
+    position:sticky;top:0;z-index:50;
+    background:rgba(10,12,16,0.82);
+    backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--line);
+  }
+  .hdr{display:flex;align-items:center;gap:20px;height:58px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:600;letter-spacing:.02em}
+  .brand .pill{font-size:10px;font-weight:600;letter-spacing:.08em;color:var(--ink-faint);border:1px solid var(--line);padding:2px 7px;border-radius:5px;text-transform:uppercase}
+  .hdr-price{display:flex;align-items:baseline;gap:9px;margin-left:4px}
+  .hdr-price .px{font-size:21px;font-weight:600;color:var(--gold);letter-spacing:.01em}
+  .hdr-price .chg{font-size:13px;font-weight:500}
+  .hdr-spacer{flex:1}
+  .regime{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;letter-spacing:.04em;padding:5px 11px;border-radius:7px}
+  .regime.bull{color:var(--green);background:var(--green-soft);border:1px solid rgba(38,208,124,.25)}
+  .regime.bear{color:var(--red);background:var(--red-soft);border:1px solid rgba(255,84,104,.25)}
+  .regime.neutral{color:var(--ink-dim);background:rgba(154,163,176,.08);border:1px solid var(--line)}
+  .hdr-meta{font-size:12px;color:var(--ink-dim)}
+  .hdr-meta b{color:var(--ink);font-weight:600}
+  .live{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:600;letter-spacing:.07em;color:var(--green)}
+  .live .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(38,208,124,.6);animation:pulse 2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(38,208,124,.5)}70%{box-shadow:0 0 0 7px rgba(38,208,124,0)}100%{box-shadow:0 0 0 0 rgba(38,208,124,0)}}
+
+  /* segmented tabs */
+  .seg{display:flex;background:var(--bg-elev);border:1px solid var(--line);border-radius:9px;padding:3px;gap:2px}
+  .seg button{font-family:var(--sans);font-size:12px;font-weight:600;letter-spacing:.03em;color:var(--ink-dim);background:transparent;border:none;padding:6px 15px;border-radius:6px;cursor:pointer;transition:.15s}
+  .seg button.active{background:var(--gold);color:#1a1206}
+  .seg button:not(.active):hover{color:var(--ink)}
+
+  /* ============ METRIC STRIP ============ */
+  .metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line-soft);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin:18px 0}
+  .metric{background:var(--bg-card);padding:14px 18px;display:flex;flex-direction:column;gap:5px}
+  .metric .lbl{font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-faint)}
+  .metric .val{font-size:22px;font-weight:600;font-family:var(--mono);letter-spacing:-.01em}
+  .metric .sub{font-size:11px;color:var(--ink-faint)}
+
+  /* ============ TERMINAL GRID ============ */
+  .terminal{display:grid;grid-template-columns:248px 1fr 300px;gap:14px;align-items:start;padding-bottom:40px}
+  @media(max-width:1180px){.terminal{grid-template-columns:1fr;}}
+  .col{display:flex;flex-direction:column;gap:14px}
+  .card{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--radius)}
+  .card-pad{padding:16px}
+  .card-h{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);padding:13px 16px 0}
+  .card-h.row{display:flex;justify-content:space-between;align-items:center}
+
+  /* left readout */
+  .bigpx{padding:16px 16px 6px}
+  .bigpx .n{font-size:30px;font-weight:600;font-family:var(--mono);color:var(--gold);letter-spacing:-.01em}
+  .bigpx .c{font-size:13px;font-weight:500;margin-top:3px}
+  .reads{padding:6px 0 10px}
+  .read{display:flex;justify-content:space-between;align-items:center;padding:9px 16px;border-top:1px solid var(--line-soft)}
+  .read .k{font-size:11px;color:var(--ink-dim);letter-spacing:.03em}
+  .read .v{font-size:13px;font-weight:600;font-family:var(--mono)}
+
+  /* telemetry */
+  .telem{padding:14px 16px 16px}
+  .telem .row{display:flex;justify-content:space-between;align-items:baseline;margin-top:10px}
+  .telem .row:first-child{margin-top:8px}
+  .telem .k{font-size:11px;color:var(--ink-dim)}
+  .telem .v{font-size:15px;font-weight:600;font-family:var(--mono)}
+  .trig{margin-top:12px;padding:9px 12px;border-radius:var(--radius-sm);font-size:12px;font-weight:600;letter-spacing:.03em;text-align:center}
+  .trig.wait{background:rgba(154,163,176,.07);color:var(--ink-dim);border:1px solid var(--line)}
+  .trig.fire{background:var(--green-soft);color:var(--green);border:1px solid rgba(38,208,124,.3)}
+
+  /* chart */
+  .chart-card{display:flex;flex-direction:column;min-height:560px}
+  .chart-head{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--line-soft)}
+  .chart-title{font-size:12px;font-weight:600;letter-spacing:.04em;color:var(--ink)}
+  .chart-title span{color:var(--ink-faint);font-weight:500;margin-left:8px}
+  .legend{display:flex;gap:14px;font-size:10.5px;color:var(--ink-dim)}
+  .legend i{display:inline-block;width:14px;height:2px;border-radius:2px;margin-right:5px;vertical-align:middle}
+  #chart{flex:1;width:100%;min-height:420px}
+  .equity-strip{border-top:1px solid var(--line-soft);padding:10px 16px 12px}
+  .equity-strip .lbl{font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-faint);display:flex;justify-content:space-between;margin-bottom:6px}
+  #equity{width:100%;height:60px}
+
+  /* decision tree (right) */
+  .dtree{padding:6px 14px 14px}
+  .rule{display:flex;gap:10px;padding:10px 2px;border-top:1px solid var(--line-soft)}
+  .rule:first-child{border-top:none}
+  .rule .ic{flex:0 0 18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;margin-top:1px}
+  .rule .ic.ok{background:var(--green-soft);color:var(--green)}
+  .rule .ic.no{background:var(--red-soft);color:var(--red)}
+  .rule .ic.pend{background:rgba(154,163,176,.1);color:var(--ink-faint)}
+  .rule .body .t{font-size:11px;color:var(--ink-dim);letter-spacing:.02em}
+  .rule .body .d{font-size:11.5px;font-family:var(--mono);color:var(--ink);margin-top:3px;line-height:1.4}
+  .verdict{margin:12px 2px 0;padding:11px 13px;border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;line-height:1.5}
+  .verdict.wait{background:rgba(245,177,51,.07);border:1px solid rgba(245,177,51,.2);color:var(--gold)}
+
+  /* position + history */
+  .pos-empty{padding:26px 16px;text-align:center;color:var(--ink-faint);font-size:13px}
+  .trades{padding:4px 0 8px}
+  .trade-row{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:9px 16px;border-top:1px solid var(--line-soft);font-size:12px}
+  .trade-row .side{font-size:10px;font-weight:700;letter-spacing:.05em;padding:2px 6px;border-radius:4px}
+  .side.long{background:var(--green-soft);color:var(--green)} .side.short{background:var(--red-soft);color:var(--red)}
+  .trades-empty{padding:24px 16px;text-align:center;color:var(--ink-faint);font-size:12.5px}
+
+  /* ============ STRATEGY VIEW ============ */
+  .strat{display:none;padding-bottom:60px}
+  .strat.show{display:block}
+  .terminal.hide{display:none}
+
+  /* hero story */
+  .story{margin:20px 0 26px;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:linear-gradient(180deg,var(--bg-elev),var(--bg-card))}
+  .story-top{padding:26px 28px 22px;border-bottom:1px solid var(--line-soft)}
+  .story-eyebrow{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:10px}
+  .story-h{font-size:26px;font-weight:600;letter-spacing:-.01em;line-height:1.25;max-width:760px}
+  .story-sub{margin-top:12px;font-size:15px;color:var(--ink-dim);max-width:680px;line-height:1.6}
+  .flow{display:grid;grid-template-columns:repeat(4,1fr);gap:0;padding:0}
+  @media(max-width:920px){.flow{grid-template-columns:1fr 1fr}}
+  .step{padding:22px 24px;border-right:1px solid var(--line-soft);position:relative}
+  .step:last-child{border-right:none}
+  .step .num{font-family:var(--mono);font-size:12px;color:var(--ink-faint);font-weight:600}
+  .step .ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;margin:12px 0 12px;font-size:18px}
+  .step .st{font-size:15px;font-weight:600;margin-bottom:6px}
+  .step .sd{font-size:13px;color:var(--ink-dim);line-height:1.55}
+  .step .arr{position:absolute;right:-9px;top:50%;transform:translateY(-50%);z-index:2;width:18px;height:18px;border-radius:50%;background:var(--bg-card);border:1px solid var(--line);display:grid;place-items:center;color:var(--ink-faint);font-size:10px}
+  @media(max-width:920px){.step .arr{display:none}}
+
+  .sec-h{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin:34px 0 16px;display:flex;align-items:center;gap:12px}
+  .sec-h::after{content:"";flex:1;height:1px;background:var(--line)}
+
+  /* plain-english rule cards */
+  .rulecards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:900px){.rulecards{grid-template-columns:1fr}}
+  .rcard{background:var(--bg-card);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .rcard .tag{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:5px;margin-bottom:13px}
+  .tag.entry{background:var(--green-soft);color:var(--green)}
+  .tag.filter{background:rgba(59,157,255,.1);color:var(--blue)}
+  .tag.exit{background:var(--gold-soft);color:var(--gold)}
+  .tag.risk{background:var(--red-soft);color:var(--red)}
+  .rcard h3{font-size:16px;font-weight:600;margin-bottom:8px}
+  .rcard p{font-size:13px;color:var(--ink-dim);line-height:1.6}
+  .rcard .tech{margin-top:13px;padding-top:13px;border-top:1px solid var(--line-soft);font-family:var(--mono);font-size:11.5px;color:var(--ink-faint);line-height:1.5}
+
+  /* architecture */
+  .arch{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  @media(max-width:900px){.arch{grid-template-columns:1fr 1fr}}
+  .anode{background:var(--bg-card);border:1px solid var(--line);border-radius:12px;padding:18px;border-top:2px solid}
+  .anode .t{font-size:14px;font-weight:600;margin:8px 0 5px}
+  .anode .d{font-size:12px;color:var(--ink-dim);line-height:1.5}
+  .anode .f{margin-top:11px;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);background:var(--bg);padding:5px 8px;border-radius:5px;display:inline-block}
+
+  /* params table */
+  .ptable{width:100%;border-collapse:collapse;background:var(--bg-card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .ptable th{text-align:left;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);padding:12px 16px;border-bottom:1px solid var(--line)}
+  .ptable td{padding:12px 16px;border-bottom:1px solid var(--line-soft);font-size:13px;color:var(--ink-dim)}
+  .ptable tr:last-child td{border-bottom:none}
+  .ptable .mod{color:var(--ink-faint);font-size:11px}
+  .ptable .val{font-family:var(--mono);color:var(--gold);font-weight:600;font-size:12.5px}
+  .stack{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}
+  .stack span{font-family:var(--mono);font-size:11px;color:var(--ink-dim);border:1px solid var(--line);padding:4px 9px;border-radius:6px}
+
+  .foot{padding:28px 0 50px;color:var(--ink-faint);font-size:11.5px;border-top:1px solid var(--line);margin-top:30px;line-height:1.7}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap hdr">
+    <div class="brand">XAU/USD <span class="pill">Paper</span></div>
+    <div class="hdr-price">
+      <span class="px mono" id="hpx">3,182.62</span>
+      <span class="chg mono neg" id="hchg">−0.26 (−0.01%)</span>
+    </div>
+    <div class="hdr-spacer"></div>
+    <div class="regime bull" id="regime">▲ BULL</div>
+    <div class="hdr-meta">ADX <b id="hadx">26.1</b></div>
+    <div class="hdr-meta">H1 · <b id="hclock">39s</b></div>
+    <div class="live"><span class="dot"></span> LIVE</div>
+    <div class="seg">
+      <button id="tabT" class="active" onclick="setView('terminal')">Terminal</button>
+      <button id="tabS" onclick="setView('strategy')">Strategy</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- METRICS -->
+  <div class="metrics">
+    <div class="metric"><span class="lbl">Total P&amp;L</span><span class="val pos">+$0.00</span><span class="sub">paper account</span></div>
+    <div class="metric"><span class="lbl">Win Rate</span><span class="val">—</span><span class="sub">no closed trades</span></div>
+    <div class="metric"><span class="lbl">Sharpe</span><span class="val">0.02</span><span class="sub">annualized</span></div>
+    <div class="metric"><span class="lbl">Max Drawdown</span><span class="val neg">−4.7%</span><span class="sub">from peak equity</span></div>
+    <div class="metric"><span class="lbl">Trades</span><span class="val">0</span><span class="sub">since inception</span></div>
+  </div>
+
+  <!-- ===== TERMINAL VIEW ===== -->
+  <section class="terminal" id="view-terminal">
+
+    <!-- LEFT -->
+    <div class="col">
+      <div class="card">
+        <div class="bigpx">
+          <div class="n mono" id="bpx">3,182.62</div>
+          <div class="c mono neg" id="bchg">▼ −0.26 (−0.01%)</div>
+        </div>
+        <div class="reads">
+          <div class="read"><span class="k">ADX (14)</span><span class="v pos" id="r-adx">26.1</span></div>
+          <div class="read"><span class="k">ATR (14)</span><span class="v" id="r-atr">7.90</span></div>
+          <div class="read"><span class="k">Vol Ratio</span><span class="v" id="r-vol">1.09×</span></div>
+          <div class="read"><span class="k">SMA (200)</span><span class="v gold" id="r-sma">3,280.67</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h">Predictive Telemetry</div>
+        <div class="telem">
+          <div class="row"><span class="k">Distance to long trigger</span><span class="v gold" id="t-dist">+$10.29</span></div>
+          <div class="row"><span class="k">Next H1 close</span><span class="v" id="t-clock">00:39</span></div>
+          <div class="trig wait" id="t-state">WAITING FOR BREAKOUT</div>
+        </div>
+      </div>
+
+      <!-- WHAT'S HAPPENING — plain-english narration tied to the live tree -->
+      <div class="card">
+        <div class="card-h">What the bot is doing</div>
+        <div class="telem" style="padding-top:10px">
+          <p style="font-size:12.5px;color:var(--ink-dim);line-height:1.6" id="narration">
+            We're in a <b class="gold">bull regime</b> and the trend is strong enough to trade.
+            The bot is <b>armed and waiting</b> — it will buy the moment price breaks
+            <b class="mono">$3,317.15</b>, the 20-hour high. Right now we're <b class="mono">$10.29</b> away.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTER -->
+    <div class="col">
+      <div class="card chart-card">
+        <div class="chart-head">
+          <div class="chart-title">XAU/USD · H1 <span>Donchian Breakout</span></div>
+          <div class="legend">
+            <span><i style="background:var(--gold)"></i>SMA 200</span>
+            <span><i style="background:var(--blue)"></i>Donchian 20</span>
+            <span><i style="background:var(--ink-faint)"></i>Trailing stop</span>
+          </div>
+        </div>
+        <div id="chart"></div>
+        <div class="equity-strip">
+          <div class="lbl"><span>Equity Curve · since inception</span><span class="mono" id="eq-now">$3,182.62</span></div>
+          <div id="equity"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="col">
+      <!-- LIVE DECISION TREE — now lives with the terminal -->
+      <div class="card">
+        <div class="card-h">Live Decision Tree</div>
+        <div class="dtree">
+          <div class="rule">
+            <div class="ic ok">✓</div>
+            <div class="body"><div class="t">Rule 1a — Regime filter</div><div class="d">Close 3,306.86 &gt; SMA200 3,280.67 → <b class="pos">BULL</b></div></div>
+          </div>
+          <div class="rule">
+            <div class="ic ok">✓</div>
+            <div class="body"><div class="t">Rule 1b — Trend filter</div><div class="d">ADX 26.1 ≥ 20 → <b class="pos">TRENDING</b></div></div>
+          </div>
+          <div class="rule">
+            <div class="ic ok">✓</div>
+            <div class="body"><div class="t">Rule 1c — Volatility cap</div><div class="d">Vol 1.09× &lt; 2.0× → <b class="pos">PASS</b></div></div>
+          </div>
+          <div class="rule">
+            <div class="ic no" id="r2ic">✕</div>
+            <div class="body"><div class="t">Rule 2 — Long entry trigger</div><div class="d">Close 3,306.86 ≤ Donchian20 high 3,317.15</div></div>
+          </div>
+          <div class="verdict wait" id="verdict">WAITING — $10.29 to breakout at 3,317.15</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h">Open Position</div>
+        <div class="pos-empty" id="posbox">— No open position —</div>
+      </div>
+
+      <div class="card">
+        <div class="card-h row"><span>Trade History</span><span class="faint">0 shown</span></div>
+        <div class="trades"><div class="trades-empty">No closed trades yet</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== STRATEGY VIEW ===== -->
+  <section class="strat" id="view-strategy">
+
+    <!-- STORYTELLING HERO -->
+    <div class="story">
+      <div class="story-top">
+        <div class="story-eyebrow">How this algorithm works</div>
+        <div class="story-h">It buys gold when a strong uptrend breaks to a new high — and gets out the moment that trend stops paying.</div>
+        <div class="story-sub">
+          No predictions, no AI guessing. Just five plain rules checked every hour. The bot only acts
+          when the market is trending hard <i>and</i> price punches above its recent ceiling. Everything else
+          is about not losing money while it waits.
+        </div>
+      </div>
+      <div class="flow">
+        <div class="step">
+          <div class="num">01</div>
+          <div class="ic" style="background:rgba(59,157,255,.12)">🌊</div>
+          <div class="st">Read the weather</div>
+          <div class="sd">Is gold in an uptrend and moving with conviction? If the market is choppy or flat, the bot stays out entirely.</div>
+          <div class="arr">→</div>
+        </div>
+        <div class="step">
+          <div class="num">02</div>
+          <div class="ic" style="background:var(--green-soft)">🎯</div>
+          <div class="st">Wait for the break</div>
+          <div class="sd">It watches the highest price of the last 20 hours. The instant price closes above that ceiling, that's the buy signal.</div>
+          <div class="arr">→</div>
+        </div>
+        <div class="step">
+          <div class="num">03</div>
+          <div class="ic" style="background:var(--gold-soft)">🛡️</div>
+          <div class="st">Size &amp; protect</div>
+          <div class="sd">It risks only 1% of the account per trade and sets a hard stop-loss right away. Losses are capped before they happen.</div>
+          <div class="arr">→</div>
+        </div>
+        <div class="step">
+          <div class="num">04</div>
+          <div class="ic" style="background:var(--red-soft)">🚪</div>
+          <div class="st">Ride, then exit</div>
+          <div class="sd">It trails the stop behind the trend. When price falls back through the recent floor, it's out — keeping the gains.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PLAIN ENGLISH RULES -->
+    <div class="sec-h">The five rules, in plain english</div>
+    <div class="rulecards">
+      <div class="rcard">
+        <span class="tag filter">Filter</span>
+        <h3>Only trade in a trend</h3>
+        <p>Gold has to be above its 200-hour average (an uptrend) and the trend strength gauge (ADX) has to read above 20. If not, the bot does nothing.</p>
+        <div class="tech">Close &gt; SMA(200) &amp;&amp; ADX(14) ≥ 20</div>
+      </div>
+      <div class="rcard">
+        <span class="tag filter">Filter</span>
+        <h3>Skip the chaos</h3>
+        <p>If the market is unusually violent — more than twice its normal hourly range — the bot refuses to enter. Wild volatility means unreliable breakouts.</p>
+        <div class="tech">vol_ratio = ATR / 100-bar median ATR &lt; 2.0×</div>
+      </div>
+      <div class="rcard">
+        <span class="tag entry">Entry</span>
+        <h3>Buy the breakout</h3>
+        <p>When price closes above the highest point of the last 20 hours, the trend just made a new high — the bot buys and joins the move.</p>
+        <div class="tech">close &gt; Donchian(20) high → ENTER LONG</div>
+      </div>
+      <div class="rcard">
+        <span class="tag risk">Risk</span>
+        <h3>Never bet the farm</h3>
+        <p>Each trade risks just 1% of the account. The position size is calculated automatically from the stop distance, so the dollar risk is always the same.</p>
+        <div class="tech">qty = equity × 0.01 / (ATR × 2)</div>
+      </div>
+      <div class="rcard">
+        <span class="tag exit">Exit</span>
+        <h3>Cut losers fast</h3>
+        <p>A hard stop sits two ATRs below entry from the very first second. If the breakout fails, the bot is out with a small, known loss.</p>
+        <div class="tech">hard stop = entry − 2 × ATR(14)</div>
+      </div>
+      <div class="rcard">
+        <span class="tag exit">Exit</span>
+        <h3>Let winners run</h3>
+        <p>As the trade profits, a trailing stop follows price up. When price closes back below the 10-hour low, the bot banks the gain and exits.</p>
+        <div class="tech">exit when close &lt; Donchian(10) low</div>
+      </div>
+    </div>
+
+    <!-- ARCHITECTURE -->
+    <div class="sec-h">System architecture</div>
+    <div class="arch">
+      <div class="anode" style="border-top-color:var(--blue)">
+        <div style="color:var(--blue);font-size:18px">◆</div>
+        <div class="t">Data Ingestion</div>
+        <div class="d">Pulls live XAU/USD prices and session-aware volatility from OANDA.</div>
+        <div class="f">data/oanda_feed.py</div>
+      </div>
+      <div class="anode" style="border-top-color:var(--purple)">
+        <div style="color:var(--purple);font-size:18px">◉</div>
+        <div class="t">Strategy / Regime</div>
+        <div class="d">Runs the SMA/ADX filter and the Donchian breakout logic each H1 close.</div>
+        <div class="f">strategy/signal_generator.py</div>
+      </div>
+      <div class="anode" style="border-top-color:var(--gold)">
+        <div style="color:var(--gold);font-size:18px">◎</div>
+        <div class="t">Risk Engine</div>
+        <div class="d">8-rule sequential circuit breaker. Sizes positions, enforces loss limits.</div>
+        <div class="f">risk/engine.py</div>
+      </div>
+      <div class="anode" style="border-top-color:var(--cyan)">
+        <div style="color:var(--cyan);font-size:18px">⬢</div>
+        <div class="t">Execution Engine</div>
+        <div class="d">Simulates fills with realistic slippage and reconciles every order.</div>
+        <div class="f">execution/engine.py</div>
+      </div>
+    </div>
+    <div class="stack">
+      <span>Python 3.12</span><span>asyncio</span><span>FastAPI</span><span>numpy</span>
+      <span>Lightweight Charts v5</span><span>WebSocket</span><span>OANDA v3</span>
+    </div>
+
+    <!-- FULL PARAMETER TABLE (the glossary, kept) -->
+    <div class="sec-h">Full parameter reference</div>
+    <table class="ptable">
+      <thead><tr><th>Module</th><th>Parameter</th><th>Value</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td class="mod">Regime</td><td>SMA lookback</td><td class="val">200 bars</td><td>close above/below SMA(200) → BULL / BEAR</td></tr>
+        <tr><td class="mod">Regime</td><td>ADX threshold</td><td class="val">≥ 20</td><td>below = choppy, entries blocked</td></tr>
+        <tr><td class="mod">Vol filter</td><td>ATR ratio cap</td><td class="val">&lt; 2.0×</td><td>vol_ratio = ATR / 100-bar median ATR</td></tr>
+        <tr><td class="mod">Entry</td><td>Donchian breakout</td><td class="val">20 bars</td><td>close &gt; D20H (long) or close &lt; D20L (short)</td></tr>
+        <tr><td class="mod">Exit</td><td>Donchian trail</td><td class="val">10 bars</td><td>close crosses D10 in adverse direction</td></tr>
+        <tr><td class="mod">Exit</td><td>Regime flip</td><td class="val">SMA(200)</td><td>close crosses SMA(200), exits matching position</td></tr>
+        <tr><td class="mod">Risk</td><td>Position risk</td><td class="val">1% equity</td><td>qty = equity × 0.01 / (ATR × 2 × 100)</td></tr>
+        <tr><td class="mod">Risk</td><td>ATR stop mult</td><td class="val">2.0×</td><td>hard stop = entry ± 2×ATR(14) at time of entry</td></tr>
+        <tr><td class="mod">Risk</td><td>Daily loss limit</td><td class="val">2% equity</td><td>circuit breaker, halts new entries</td></tr>
+        <tr><td class="mod">Risk</td><td>Weekly loss limit</td><td class="val">5% equity</td><td>circuit breaker, halts new entries</td></tr>
+        <tr><td class="mod">Risk</td><td>Max drawdown</td><td class="val">15% peak</td><td>emergency state, all orders blocked</td></tr>
+      </tbody>
+    </table>
+
+    <div class="foot">
+      Paper-trading forward test. Past and simulated performance does not guarantee future results.
+      All decisions are deterministic and rule-based — there is no machine-learning model in the loop.
+    </div>
+  </section>
+</main>
+
+<script>
+/* ============================================================
+   VIEW TOGGLE
+   ============================================================ */
+function setView(v){
+  const t = document.getElementById('view-terminal');
+  const s = document.getElementById('view-strategy');
+  document.getElementById('tabT').classList.toggle('active', v==='terminal');
+  document.getElementById('tabS').classList.toggle('active', v==='strategy');
+  if(v==='terminal'){ t.classList.remove('hide'); s.classList.remove('show'); setTimeout(fit,30); }
+  else { t.classList.add('hide'); s.classList.add('show'); }
+}
+
+/* ============================================================
+   CHART  (Lightweight Charts v5 — uses addSeries, the v4 bug fixed)
+   ============================================================ */
+const LWC = window.LightweightCharts;
+const chartEl = document.getElementById('chart');
+
+const chart = LWC.createChart(chartEl, {
+  layout:{ background:{ type:'solid', color:'transparent' }, textColor:'#9aa3b0', fontFamily:"'DM Mono', monospace", fontSize:10 },
+  grid:{ vertLines:{ color:'rgba(30,37,48,0.55)' }, horzLines:{ color:'rgba(30,37,48,0.55)' } },
+  rightPriceScale:{ borderColor:'#1e2530' },
+  timeScale:{ borderColor:'#1e2530', timeVisible:true, secondsVisible:false },
+  crosshair:{ mode: LWC.CrosshairMode.Normal },
+});
+
+const candles = chart.addSeries(LWC.CandlestickSeries, {
+  upColor:'#26d07c', downColor:'#ff5468', borderVisible:false,
+  wickUpColor:'#26d07c', wickDownColor:'#ff5468',
+});
+const sma = chart.addSeries(LWC.LineSeries, { color:'rgba(245,177,51,0.85)', lineWidth:1.5, priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false });
+const dUp = chart.addSeries(LWC.LineSeries, { color:'rgba(59,157,255,0.55)', lineWidth:1, lineStyle:2, priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false });
+const dLo = chart.addSeries(LWC.LineSeries, { color:'rgba(59,157,255,0.30)', lineWidth:1, lineStyle:2, priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false });
+
+/* ---- generate realistic H1 mock data (replace with /api/bars in prod) ---- */
+function genBars(n, start){
+  const bars=[]; let price=start; const now=Math.floor(Date.now()/1000);
+  const step=3600;
+  for(let i=n;i>0;i--){
+    const t=now-(i*step);
+    const drift=0.18, vol=6.2;
+    const o=price;
+    const move=(Math.random()-0.46)*vol + drift;
+    const c=o+move;
+    const h=Math.max(o,c)+Math.random()*vol*0.6;
+    const l=Math.min(o,c)-Math.random()*vol*0.6;
+    bars.push({time:t,open:+o.toFixed(2),high:+h.toFixed(2),low:+l.toFixed(2),close:+c.toFixed(2)});
+    price=c;
+  }
+  return bars;
+}
+const bars = genBars(220, 3120);
+
+function smaSeries(data, period){
+  const out=[];
+  for(let i=0;i<data.length;i++){
+    if(i<period-1) continue;
+    let sum=0; for(let j=i-period+1;j<=i;j++) sum+=data[j].close;
+    out.push({time:data[i].time, value:+(sum/period).toFixed(2)});
+  }
+  return out;
+}
+function donchian(data, period, hi){
+  const out=[];
+  for(let i=0;i<data.length;i++){
+    if(i<period-1) continue;
+    let v = hi ? -Infinity : Infinity;
+    for(let j=i-period+1;j<=i;j++){ v = hi ? Math.max(v,data[j].high) : Math.min(v,data[j].low); }
+    out.push({time:data[i].time, value:+v.toFixed(2)});
+  }
+  return out;
+}
+
+candles.setData(bars);
+sma.setData(smaSeries(bars, 200 > bars.length ? 50 : 100));  // 100-period proxy so the line is visible on mock set
+dUp.setData(donchian(bars, 20, true));
+dLo.setData(donchian(bars, 20, false));
+
+chart.timeScale().fitContent();
+
+/* equity sparkline */
+const eqChart = LWC.createChart(document.getElementById('equity'), {
+  layout:{ background:{type:'solid',color:'transparent'}, textColor:'transparent', fontSize:1 },
+  grid:{ vertLines:{visible:false}, horzLines:{visible:false} },
+  rightPriceScale:{ visible:false }, leftPriceScale:{visible:false},
+  timeScale:{ visible:false }, crosshair:{ mode:0 }, handleScroll:false, handleScale:false,
+});
+const eqLine = eqChart.addSeries(LWC.AreaSeries, {
+  lineColor:'#f5b133', topColor:'rgba(245,177,51,0.18)', bottomColor:'rgba(245,177,51,0.0)',
+  lineWidth:2, priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false,
+});
+const eqData = bars.map((b,i)=>({time:b.time, value:+(3180 + Math.sin(i/14)*9 - i*0.02).toFixed(2)}));
+eqLine.setData(eqData);
+eqChart.timeScale().fitContent();
+
+/* responsive sizing — the thing the old build forgot */
+function fit(){
+  chart.applyOptions({ width: chartEl.clientWidth, height: chartEl.clientHeight });
+  const eqEl=document.getElementById('equity');
+  eqChart.applyOptions({ width: eqEl.clientWidth, height: eqEl.clientHeight });
+}
+const ro = new ResizeObserver(fit);
+ro.observe(chartEl);
+window.addEventListener('resize', fit);
+setTimeout(fit, 50);
+
+/* ============================================================
+   LIVE SIMULATION  (replace with WebSocket /ws in prod)
+   ============================================================ */
+let last = bars[bars.length-1];
+let liveClose = last.close;
+let basePrice = 3182.62, prevClose = 3182.88;
+const triggerHigh = 3317.15;
+
+function fmt(n){ return n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+function tick(){
+  // jitter the price
+  liveClose += (Math.random()-0.5)*1.4;
+  const px = liveClose;
+  const chg = px - prevClose;
+  const chgPct = (chg/prevClose*100);
+  const sign = chg>=0?'+':'−';
+  const cls = chg>=0?'pos':'neg';
+  const arrow = chg>=0?'▲':'▼';
+
+  // header
+  const hpx=document.getElementById('hpx'); hpx.textContent=fmt(px);
+  const hchg=document.getElementById('hchg'); hchg.textContent=`${sign}${fmt(Math.abs(chg))} (${sign}${Math.abs(chgPct).toFixed(2)}%)`;
+  hchg.className='chg mono '+cls;
+
+  // left big price
+  const bpx=document.getElementById('bpx'); bpx.textContent=fmt(px);
+  const bchg=document.getElementById('bchg'); bchg.textContent=`${arrow} ${sign}${fmt(Math.abs(chg))} (${sign}${Math.abs(chgPct).toFixed(2)}%)`;
+  bchg.className='c mono '+cls;
+
+  // distance to trigger
+  const dist = triggerHigh - px;
+  document.getElementById('t-dist').textContent = (dist>=0?'+$':'−$')+fmt(Math.abs(dist));
+
+  // update last candle on chart (animate the forming bar)
+  last.close = +px.toFixed(2);
+  last.high = Math.max(last.high, last.close);
+  last.low = Math.min(last.low, last.close);
+  candles.update(last);
+}
+
+/* H1 countdown */
+let secs = 39;
+function clock(){
+  secs--; if(secs<0) secs=3599;
+  const m=String(Math.floor(secs/60)).padStart(2,'0');
+  const s=String(secs%60).padStart(2,'0');
+  document.getElementById('t-clock').textContent=`${m}:${s}`;
+  document.getElementById('hclock').textContent= secs<60 ? `${secs}s` : `${Math.floor(secs/60)}m`;
+}
+
+setInterval(tick, 1100);
+setInterval(clock, 1000);
+tick();
+</script>
+</body>
+</html>
