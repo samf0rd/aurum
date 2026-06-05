@@ -43,7 +43,7 @@ RUN groupadd --gid 1001 trader && \
     useradd --uid 1001 --gid trader --shell /bin/bash --create-home trader
 
 COPY pyproject.toml .
-RUN pip install --upgrade pip && pip install -e .
+RUN pip install --upgrade pip setuptools wheel && pip install .
 
 COPY src/ ./src/
 COPY config/ ./config/
