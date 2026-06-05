@@ -1,6 +1,7 @@
 """
 src/main.py  — system entrypoint, dependency injection only.
-Set PAPER_MODE=true to run without live OANDA credentials.
+PAPER_MODE=true uses internal PaperBroker; market data always comes from
+Twelve Data (real XAU/USD prices, no OANDA dependency).
 """
 from __future__ import annotations
 import asyncio, json, logging, os, sys, time
@@ -32,15 +33,12 @@ logger = logging.getLogger(__name__)
 
 def _cfg() -> dict:
     paper = os.environ.get("PAPER_MODE", "true").lower() in ("1", "true", "yes")
-    if not paper:
-        missing = [k for k in ("OANDA_ACCOUNT_ID", "OANDA_API_TOKEN") if not os.environ.get(k)]
-        if missing:
-            logger.error("Missing env vars: %s", missing); sys.exit(1)
+    if not os.environ.get("TWELVE_DATA_API_KEY"):
+        logger.error("TWELVE_DATA_API_KEY is not set — sign up free at https://twelvedata.com")
+        sys.exit(1)
     return {
         "paper":          paper,
-        "account_id":     os.environ.get("OANDA_ACCOUNT_ID", ""),
-        "api_token":      os.environ.get("OANDA_API_TOKEN", ""),
-        "equity":         Decimal(os.environ.get("INITIAL_EQUITY", "10000")),
+        "equity":         Decimal(os.environ.get("PAPER_EQUITY", os.environ.get("INITIAL_EQUITY", "10000"))),
         "risk_pct":       float(os.environ.get("RISK_FRACTION", "0.01")),
         "max_daily":      float(os.environ.get("MAX_DAILY_LOSS", "0.02")),
         "max_weekly":     float(os.environ.get("MAX_WEEKLY_LOSS", "0.05")),
@@ -76,15 +74,10 @@ async def main() -> None:
     from risk import RiskEngineAdapter
     risk = RiskEngineAdapter(risk)
 
-    # Broker
-    if cfg["paper"]:
-        from paper.paper_broker import PaperBrokerAdapter
-        broker = PaperBrokerAdapter(initial_equity=cfg["equity"])
-        logger.info("Broker: PAPER")
-    else:
-        from execution.brokers.oanda import OandaAdapter
-        broker = OandaAdapter(account_id=cfg["account_id"], api_token=cfg["api_token"])
-        logger.info("Broker: LIVE OANDA")
+    # Broker — always PaperBroker for now (live broker wired separately when needed)
+    from paper.paper_broker import PaperBrokerAdapter
+    broker = PaperBrokerAdapter(initial_equity=cfg["equity"])
+    logger.info("Broker: PAPER")
 
     # Execution engine — risk coupled via callback only (no import cycle)
     from execution.engine import ExecutionEngine
@@ -110,13 +103,13 @@ async def main() -> None:
     )
 
     from strategy.signal_generator import DonchianBreakoutSignalGenerator, RegimeDetector
-    from data.oanda_feed import OandaDataFeed
+    from data.twelvedata_feed import TwelveDataFeed
     from orders.manager import DefaultOrderManager
     from dashboard.state import SystemState
 
     regime    = RegimeDetector()
     signals   = DonchianBreakoutSignalGenerator()
-    data_feed = OandaDataFeed(broker)
+    data_feed = TwelveDataFeed()
     order_mgr = DefaultOrderManager(broker=broker, risk_engine=risk, event_bus=bus)
     state     = SystemState(initial_equity=cfg["equity"])
 

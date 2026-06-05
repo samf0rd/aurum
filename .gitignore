@@ -1,6 +1,7 @@
 .env
 .claude/
-data/
+/xauusd_system/data/
+/xauusd_system/logs/
 logs/
 __pycache__/
 *.pyc

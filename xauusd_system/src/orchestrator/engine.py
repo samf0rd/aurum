@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from datetime import datetime, date, timedelta, timezone
 from decimal import Decimal
 from typing import Optional, Sequence
@@ -106,8 +107,9 @@ class TradingOrchestrator:
         except Exception as exc:
             logger.warning("prewarm_bars_failed", exc_info=exc)
 
+        price_interval = int(os.environ.get("PRICE_TICK_INTERVAL", "300"))
         await asyncio.gather(
-            self._price_loop(interval=5),
+            self._price_loop(interval=price_interval),
             self._bar_loop(interval=60),
             self._daily_reset_loop(),
         )
