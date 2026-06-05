@@ -49,7 +49,7 @@ COPY src/ ./src/
 COPY config/ ./config/
 
 # Logs directory owned by non-root user
-RUN mkdir -p /app/logs && chown trader:trader /app/logs
+RUN mkdir -p /app/logs /app/data && chown -R trader:trader /app/logs /app/data
 
 USER trader
 
