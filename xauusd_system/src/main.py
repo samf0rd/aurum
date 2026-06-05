@@ -60,15 +60,13 @@ async def main() -> None:
     # Risk engine
     from risk.engine import RiskEngine
     from risk.models import RiskConfig
-    risk = RiskEngine(
-        initial_equity=cfg["equity"],
-        config=RiskConfig(
-            risk_pct_normal=Decimal(str(cfg["risk_pct"])),
-            daily_loss_limit_pct=Decimal(str(cfg["max_daily"])),
-            weekly_loss_limit_pct=Decimal(str(cfg["max_weekly"])),
-            max_drawdown_pct=Decimal(str(cfg["max_dd"])),
-        ),
+    risk_cfg = RiskConfig(
+        risk_pct_normal=Decimal(str(cfg["risk_pct"])),
+        daily_loss_limit_pct=Decimal(str(cfg["max_daily"])),
+        weekly_loss_limit_pct=Decimal(str(cfg["max_weekly"])),
+        max_drawdown_pct=Decimal(str(cfg["max_dd"])),
     )
+    risk = RiskEngine(initial_equity=cfg["equity"], config=risk_cfg)
 
     # Wrap with adapter so orchestrator's IRiskEngine interface is satisfied
     from risk import RiskEngineAdapter
@@ -127,7 +125,7 @@ async def main() -> None:
         import uvicorn
         from dashboard.api import build_app
         server = uvicorn.Server(uvicorn.Config(
-            build_app(state, data_feed), host="0.0.0.0", port=cfg["dashboard_port"],
+            build_app(state, data_feed, risk_config=risk_cfg), host="0.0.0.0", port=cfg["dashboard_port"],
             log_level="warning", access_log=False,
         ))
         dash_task = asyncio.create_task(server.serve())

@@ -563,10 +563,73 @@ window.addEventListener('resize', fit);
 setTimeout(fit, 50);
 
 /* ============================================================
-   FORMATTERS & STATE
+   FORMATTERS
    ============================================================ */
 function fmt(n){ return n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
+/* ============================================================
+   CONFIG — live engine constants fetched from /api/config
+   Safe fallback values match RiskConfig / ACTIVE_PROFILE defaults
+   so the UI is never broken while the fetch is in flight.
+   ============================================================ */
+let CONFIG = {
+  profile: {
+    name:           'Intraday (M15)',
+    timeframe:      'M15',
+    bar_seconds:    900,
+    sma_period:     200,
+    adx_period:     14,
+    adx_threshold:  20.0,
+    donchian_entry: 20,
+    donchian_exit:  10,
+    atr_period:     14,
+    atr_stop_mult:  2.0,
+    vol_ratio_cap:  2.0,
+    risk_per_trade: 0.01,
+  },
+  risk: {
+    risk_pct_normal:        0.01,
+    daily_loss_limit_pct:   0.02,
+    weekly_loss_limit_pct:  0.05,
+    max_drawdown_pct:       0.15,
+    drawdown_resume_pct:    0.10,
+    spread_gate_multiplier: 3.0,
+  },
+};
+
+fetch('/api/config').then(r => r.json()).then(cfg => {
+  if (cfg.profile) CONFIG.profile = cfg.profile;
+  if (cfg.risk)    CONFIG.risk    = cfg.risk;
+}).catch(() => {});
+
+/* ============================================================
+   VIEW STATE
+   viewMode controls which state object drives the UI.
+   The WebSocket handler writes ONLY to liveState — no viewMode
+   reference inside the message handler.
+   The chart always streams live data regardless of mode.
+   ============================================================ */
+let viewMode = 'live';  // 'live' | 'replay'
+
+const liveState = {
+  trades:       [],
+  openPosition: null,
+  metrics:      {},
+};
+
+const replayState = {
+  trades:       [],   // populated by WP-4
+  openPosition: null,
+  metrics:      {},
+};
+
+function activeState() {
+  return viewMode === 'replay' ? replayState : liveState;
+}
+
+/* ============================================================
+   CHART STATE
+   ============================================================ */
 let last = null;
 let barsLoaded = false;
 let sessionOpen = 0;
@@ -621,14 +684,18 @@ fetch('/api/equity').then(r=>r.json()).then(json => {
   document.getElementById('eq-now').textContent = '$' + fmt(latest.value);
 }).catch(() => {});
 
-/* load initial trades */
+/* load initial trades → liveState */
 fetch('/api/trades').then(r=>r.json()).then(json => {
-  if (json.trades) renderTrades(json.trades);
+  if (json.trades) {
+    liveState.trades = json.trades;
+    renderTrades(activeState().trades);
+  }
 }).catch(() => {});
 
-/* load initial position */
+/* load initial position → liveState */
 fetch('/api/position').then(r=>r.json()).then(json => {
-  renderPosition(json);
+  liveState.openPosition = json ?? null;
+  renderPosition(activeState().openPosition);
 }).catch(() => {});
 
 /* ============================================================
@@ -716,12 +783,13 @@ function applyState(s) {
   // ── Rule 1c ───────────────────────────────────────────────────────
   const r1c = document.getElementById('r1c-ic');
   const r1cd = document.getElementById('r1c-d');
-  const volOk = !s.vol_ratio || s.vol_ratio < 2.0;
+  const volCap = CONFIG.profile.vol_ratio_cap;
+  const volOk  = !s.vol_ratio || s.vol_ratio < volCap;
   r1c.textContent = volOk ? '✓' : '✕';
   r1c.className   = volOk ? 'ic ok' : 'ic no';
   r1cd.innerHTML  = volOk
-    ? `Vol ${s.vol_ratio?.toFixed(2) ?? '—'}× &lt; 2.0× → <b class="pos">PASS</b>`
-    : `Vol ${s.vol_ratio?.toFixed(2)}× ≥ 2.0× → <b class="neg">BLOCKED</b>`;
+    ? `Vol ${s.vol_ratio?.toFixed(2) ?? '—'}× &lt; ${volCap}× → <b class="pos">PASS</b>`
+    : `Vol ${s.vol_ratio?.toFixed(2)}× ≥ ${volCap}× → <b class="neg">BLOCKED</b>`;
 
   // ── Rule 2 + verdict — gated on whether a position is already open ─
   const r2 = document.getElementById('r2ic');
@@ -844,22 +912,26 @@ function connectWS() {
   ws.onmessage = (e) => {
     const d = JSON.parse(e.data);
     if (d.type !== 'tick') return;
-    wsRetry = 1000; // reset backoff on successful message
+    wsRetry = 1000;
 
-    // --- price tick ---
+    // ── Write ONLY to liveState — no viewMode reference in this handler ──
+    if (d.position !== undefined) liveState.openPosition = d.position ?? null;
+    if (d.trades !== undefined)   liveState.trades       = d.trades   ?? [];
+    if (d.stats  !== undefined)   liveState.metrics      = d.stats    ?? {};
+
+    // ── Chart always streams live, regardless of viewMode ────────────────
     if (d.current_price !== undefined) {
       if (sessionOpen === 0) sessionOpen = d.current_price;
       updatePriceDisplay(d.current_price, d.current_price - sessionOpen);
     }
 
-    // --- live forming candle ---
     if (d.candle && d.candle.time && barsLoaded) {
       last = { time: d.candle.time, open: d.candle.open,
                high: d.candle.high, low: d.candle.low, close: d.candle.close };
       candles.update(last);
     }
 
-    // --- strategy state (assemble from scattered WS fields) ---
+    // ── Strategy state (always reflects live engine) ──────────────────────
     const ind = d.indicators || {};
     applyState({
       regime:          d.regime,
@@ -874,29 +946,25 @@ function connectWS() {
       position_side:   d.position?.side ?? null,
     });
 
-    // --- equity point --- backend sends equity_curve[-1] = [iso_ts, float]
+    // ── Equity sparkline (always live) ────────────────────────────────────
     if (d.equity !== undefined && d.equity !== null) {
       const eqVal = Array.isArray(d.equity) ? d.equity[1] : d.equity;
       eqLine.update({ time: Math.floor(Date.now() / 1000), value: eqVal });
       document.getElementById('eq-now').textContent = '$' + fmt(eqVal);
     }
 
-    // --- open position ---
-    if (d.position !== undefined) renderPosition(d.position);
+    // ── Render position + trades from activeState() ───────────────────────
+    renderPosition(activeState().openPosition);
+    if (d.trades !== undefined) renderTrades(activeState().trades);
 
-    // --- closed trades (if backend ever includes them in WS) ---
-    if (d.trades) renderTrades(d.trades);
-
-    // --- H1 countdown sync ---
+    // ── Clock + profile badge ─────────────────────────────────────────────
     if (d.last_bar_eval_ts) updateClock(d.last_bar_eval_ts);
 
-    // --- profile badge ---
     if (d.profile) {
       document.getElementById('hprofile').textContent = d.profile;
       const caveatName = document.getElementById('caveat-profile-name');
       const caveatAlt  = document.getElementById('caveat-profile-alt');
       if (caveatName) caveatName.textContent = d.profile;
-      // Show the other profile as the "other" reference
       if (caveatAlt) caveatAlt.textContent = d.profile.includes('M15') ? 'Swing (H1)' : 'Intraday (M15)';
     }
   };

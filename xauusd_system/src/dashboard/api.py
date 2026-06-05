@@ -13,6 +13,7 @@ _log = logging.getLogger(__name__)
 
 _state: Optional[SystemState] = None
 _data_feed = None
+_risk_config = None   # RiskConfig | None — set by build_app, read by /api/config
 
 
 def _calc_proximity(s: SystemState) -> dict:
@@ -68,10 +69,11 @@ def _trade_dict(t) -> dict:
     return d
 
 
-def build_app(state: SystemState, data_feed=None) -> FastAPI:
-    global _state, _data_feed
+def build_app(state: SystemState, data_feed=None, risk_config=None) -> FastAPI:
+    global _state, _data_feed, _risk_config
     _state = state
     _data_feed = data_feed
+    _risk_config = risk_config
 
     app = FastAPI(title="XAUUSD", docs_url=None, redoc_url=None)
     static = Path(__file__).parent / "static"
@@ -79,6 +81,38 @@ def build_app(state: SystemState, data_feed=None) -> FastAPI:
 
     @app.get("/health")
     async def health(): return {"status": "ok", "uptime_s": round(time.time()-_state.started_at)}
+
+    @app.get("/api/config")
+    async def config_endpoint():
+        """
+        Expose the live strategy profile and risk limits to the frontend so the
+        UI always shows exactly the values the engine enforces — never hardcoded.
+        """
+        profile = {
+            "name":           ACTIVE_PROFILE.name,
+            "timeframe":      ACTIVE_PROFILE.timeframe,
+            "bar_seconds":    ACTIVE_PROFILE.bar_seconds,
+            "sma_period":     ACTIVE_PROFILE.sma_period,
+            "adx_period":     ACTIVE_PROFILE.adx_period,
+            "adx_threshold":  ACTIVE_PROFILE.adx_threshold,
+            "donchian_entry": ACTIVE_PROFILE.donchian_entry,
+            "donchian_exit":  ACTIVE_PROFILE.donchian_exit,
+            "atr_period":     ACTIVE_PROFILE.atr_period,
+            "atr_stop_mult":  ACTIVE_PROFILE.atr_stop_mult,
+            "vol_ratio_cap":  ACTIVE_PROFILE.vol_ratio_cap,
+            "risk_per_trade": ACTIVE_PROFILE.risk_per_trade,
+        }
+        risk: dict = {}
+        if _risk_config is not None:
+            risk = {
+                "risk_pct_normal":        float(_risk_config.risk_pct_normal),
+                "daily_loss_limit_pct":   float(_risk_config.daily_loss_limit_pct),
+                "weekly_loss_limit_pct":  float(_risk_config.weekly_loss_limit_pct),
+                "max_drawdown_pct":       float(_risk_config.max_drawdown_pct),
+                "drawdown_resume_pct":    float(_risk_config.drawdown_resume_pct),
+                "spread_gate_multiplier": float(_risk_config.spread_gate_multiplier),
+            }
+        return {"profile": profile, "risk": risk}
 
     @app.get("/", response_class=HTMLResponse)
     async def root(): return FileResponse(str(static/"index.html"))
