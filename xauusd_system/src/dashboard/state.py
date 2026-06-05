@@ -33,6 +33,7 @@ class SystemState:
         self.current_price: Optional[float] = None
         self.last_tick_ts: Optional[Any] = None
         self.last_spread: float = 0.0
+        self.last_median_spread: float = 0.0
         self.last_indicators: dict = {}
         self.daily_trade_count: int = 0
         # Last signal (updated by process_bar on each H1 close)

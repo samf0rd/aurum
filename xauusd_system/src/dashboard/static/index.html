@@ -70,6 +70,17 @@
   .live .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(38,208,124,.6);animation:pulse 2s infinite}
   @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(38,208,124,.5)}70%{box-shadow:0 0 0 7px rgba(38,208,124,0)}100%{box-shadow:0 0 0 0 rgba(38,208,124,0)}}
 
+  /* ── Telemetry cluster ── */
+  .telem-cluster{display:flex;align-items:center;gap:14px;padding:0 2px;border-left:1px solid var(--line);border-right:1px solid var(--line);margin:0 4px;padding:0 14px}
+  .telem-item{display:flex;flex-direction:column;align-items:center;gap:1px}
+  .telem-lbl{font-size:8px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);white-space:nowrap}
+  .telem-modeled{font-size:7px;letter-spacing:.03em;color:var(--ink-faint);font-weight:400;text-transform:none;font-style:italic}
+  .telem-val{font-size:12px;font-weight:600;font-family:var(--mono);font-feature-settings:"tnum" 1;white-space:nowrap}
+  .tel-dim{color:var(--ink-faint)}
+  .tel-good{color:var(--green)}
+  .tel-warn{color:var(--gold)}
+  .tel-bad{color:var(--red)}
+
   /* segmented tabs */
   .seg{display:flex;background:var(--bg-elev);border:1px solid var(--line);border-radius:9px;padding:3px;gap:2px}
   .seg button{font-family:var(--sans);font-size:12px;font-weight:600;letter-spacing:.03em;color:var(--ink-dim);background:transparent;border:none;padding:6px 15px;border-radius:6px;cursor:pointer;transition:.15s}
@@ -216,6 +227,20 @@
     <div class="regime neutral" id="regime">◆ NEUTRAL</div>
     <div class="hdr-meta">ADX <b id="hadx">—</b></div>
     <div class="hdr-meta">H1 · <b id="hclock">—</b></div>
+    <div class="telem-cluster">
+      <div class="telem-item">
+        <span class="telem-lbl">SPREAD <span class="telem-modeled">modeled</span></span>
+        <span class="telem-val tel-dim" id="tel-spread-val">—</span>
+      </div>
+      <div class="telem-item">
+        <span class="telem-lbl">PING</span>
+        <span class="telem-val tel-dim" id="tel-ping-val">—</span>
+      </div>
+      <div class="telem-item">
+        <span class="telem-lbl">TICK AGE</span>
+        <span class="telem-val tel-dim" id="tel-age-val">—</span>
+      </div>
+    </div>
     <div class="live"><span class="dot"></span> LIVE</div>
     <div class="seg">
       <button id="tabT" class="active" onclick="setView('terminal')">Terminal</button>
@@ -603,6 +628,44 @@ fetch('/api/config').then(r => r.json()).then(cfg => {
 }).catch(() => {});
 
 /* ============================================================
+   TELEMETRY — PING / TICK AGE / SPREAD
+   ============================================================ */
+let lastTickMs  = 0;   // performance.now() when the last tick arrived
+
+// Tick-age counter runs at ~10 Hz; no WS dependency
+setInterval(() => {
+  const el = document.getElementById('tel-age-val');
+  if (!el || lastTickMs === 0) return;
+  const age = (performance.now() - lastTickMs) / 1000;
+  el.textContent = age.toFixed(1) + 's';
+  el.className   = 'telem-val ' + (age < 1 ? 'tel-good' : age < 2 ? 'tel-warn' : 'tel-bad');
+}, 100);
+
+// Ping — sent every 5 s once the WS is open; RTT updated in WS handler
+function _sendPing() {
+  if (typeof ws !== 'undefined' && ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'ping', t: performance.now() }));
+  }
+}
+setInterval(_sendPing, 5000);
+
+// Spread — called from the WS tick handler whenever d.spread arrives
+function _updateSpread(spread, medianSpread) {
+  const el = document.getElementById('tel-spread-val');
+  if (!el) return;
+  const mult    = CONFIG.risk.spread_gate_multiplier || 3.0;
+  const median  = medianSpread > 0 ? medianSpread : spread;
+  const cap     = median * mult;
+  const ratio   = cap > 0 ? spread / cap : 0;
+  const blocked = spread >= cap;
+  el.textContent = '~$' + spread.toFixed(2);
+  el.className   = 'telem-val ' + (blocked ? 'tel-bad' : ratio > 0.5 ? 'tel-warn' : 'tel-good');
+  el.title = blocked
+    ? `Spread $${spread.toFixed(2)} > $${cap.toFixed(2)} cap — entries blocked`
+    : `Spread $${spread.toFixed(2)} (modeled ±$${(spread/2).toFixed(2)} half-spread) · gate cap $${cap.toFixed(2)} · entries pass`;
+}
+
+/* ============================================================
    VIEW STATE
    viewMode controls which state object drives the UI.
    The WebSocket handler writes ONLY to liveState — no viewMode
@@ -911,8 +974,24 @@ function connectWS() {
 
   ws.onmessage = (e) => {
     const d = JSON.parse(e.data);
+
+    // ── Pong: update ping display and exit ────────────────────────────────
+    if (d.type === 'pong') {
+      const rtt = Math.round(performance.now() - (d.t || 0));
+      const el  = document.getElementById('tel-ping-val');
+      if (el) {
+        el.textContent = rtt + 'ms';
+        el.className   = 'telem-val ' + (rtt < 80 ? 'tel-good' : rtt < 200 ? 'tel-warn' : 'tel-bad');
+      }
+      return;
+    }
+
     if (d.type !== 'tick') return;
-    wsRetry = 1000;
+    wsRetry   = 1000;
+    lastTickMs = performance.now();   // stamp arrival for TICK AGE counter
+
+    // ── Spread telemetry ──────────────────────────────────────────────────
+    if (d.spread !== undefined) _updateSpread(d.spread, d.median_spread || 0);
 
     // ── Write ONLY to liveState — no viewMode reference in this handler ──
     if (d.position !== undefined) liveState.openPosition = d.position ?? null;

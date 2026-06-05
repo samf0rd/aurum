@@ -232,16 +232,19 @@ def build_app(state: SystemState, data_feed=None, risk_config=None) -> FastAPI:
         return {"sma200": sma200, "donchian_high": donchian_high, "donchian_low": donchian_low}
 
     @app.websocket("/ws/live")
-    async def ws(ws: WebSocket):
-        await ws.accept()
-        try:
+    async def ws(websocket: WebSocket):
+        await websocket.accept()
+
+        async def _send_ticks() -> None:
             while True:
                 await asyncio.sleep(2)
-                ts = _state.last_tick_ts.isoformat() if _state.last_tick_ts else None
-                sig_ts = _state.last_signal_ts.isoformat() if _state.last_signal_ts else None
-                await ws.send_text(json.dumps({
+                ts     = _state.last_tick_ts.isoformat()   if _state.last_tick_ts    else None
+                sig_ts = _state.last_signal_ts.isoformat() if _state.last_signal_ts  else None
+                await websocket.send_text(json.dumps({
                     "type":             "tick",
                     "profile":          ACTIVE_PROFILE.name,
+                    "spread":           round(_state.last_spread, 4),
+                    "median_spread":    round(_state.last_median_spread, 4),
                     "equity":           _state.equity_curve[-1] if _state.equity_curve else None,
                     "current_price":    _state.current_price,
                     "last_tick_ts":     ts,
@@ -259,5 +262,24 @@ def build_app(state: SystemState, data_feed=None, risk_config=None) -> FastAPI:
                         "ts":     sig_ts,
                     },
                 }))
-        except (WebSocketDisconnect, Exception): pass
+
+        async def _handle_messages() -> None:
+            # Receive client messages (ping/pong) without blocking the send loop.
+            while True:
+                try:
+                    text = await websocket.receive_text()
+                    msg  = json.loads(text)
+                    if msg.get("type") == "ping":
+                        await websocket.send_text(json.dumps({
+                            "type": "pong",
+                            "t":    msg.get("t"),   # echo client timestamp for RTT calc
+                        }))
+                except Exception:
+                    break
+
+        try:
+            await asyncio.gather(_send_ticks(), _handle_messages())
+        except (WebSocketDisconnect, Exception):
+            pass
+
     return app

@@ -283,9 +283,10 @@ class TradingOrchestrator:
                     self._spread_history.pop(0)
 
                 if self._state is not None:
-                    self._state.current_price = mid
-                    self._state.last_tick_ts  = tick["timestamp"]
-                    self._state.last_spread   = spread
+                    self._state.current_price      = mid
+                    self._state.last_tick_ts       = tick["timestamp"]
+                    self._state.last_spread        = spread
+                    self._state.last_median_spread = float(self._median_spread())
 
                     # Maintain forming candle for the live candlestick chart
                     _now    = datetime.now(timezone.utc)
