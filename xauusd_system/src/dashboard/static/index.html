@@ -147,6 +147,26 @@
   .verdict{margin:12px 2px 0;padding:11px 13px;border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;line-height:1.5}
   .verdict.wait{background:rgba(245,177,51,.07);border:1px solid rgba(245,177,51,.2);color:var(--gold)}
 
+  /* ── Decision tree — quantitative expansion ── */
+  .rule{cursor:pointer;border-radius:5px;transition:background .1s}
+  .rule:hover{background:rgba(255,255,255,.025)}
+  .rule-chev{flex-shrink:0;font-size:10px;color:var(--ink-faint);margin-top:3px;line-height:1;transition:transform .15s;user-select:none;align-self:flex-start}
+  .rule.open .rule-chev{transform:rotate(90deg)}
+  .rule-detail{display:none;margin-top:7px;padding-top:7px;border-top:1px solid var(--line-soft)}
+  .rule.open .rule-detail{display:block}
+  .rml{font-size:10.5px;font-family:var(--mono);color:var(--ink-dim);line-height:1.55}
+  .rule-gauge-wrap{margin-bottom:5px}
+  .rgl{display:flex;justify-content:space-between;font-size:9px;color:var(--ink-faint);font-family:var(--mono);margin-bottom:3px}
+  .rule-gauge-track{height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden}
+  .rule-gauge-fill{height:100%;border-radius:2px;transition:width .5s ease}
+  .rgf-ok  {background:var(--green)}
+  .rgf-warn{background:var(--gold)}
+  .rgf-bad {background:var(--red)}
+  .rgf-dim {background:var(--ink-faint)}
+  .rule-eta{margin-top:5px;font-size:10px;font-family:var(--mono);color:var(--ink-faint);line-height:1.5}
+  .rule-eta .etav{color:var(--gold);font-weight:600}
+  .rule-eta .etae{font-size:9px;color:var(--ink-faint)}
+
   /* position + history */
   .pos-empty{padding:26px 16px;text-align:center;color:var(--ink-faint);font-size:13px}
   .trades{padding:4px 0 8px}
@@ -323,22 +343,81 @@
       <div class="card">
         <div class="card-h">Live Decision Tree</div>
         <div class="dtree">
-          <div class="rule">
+
+          <!-- Rule 1a — Regime filter -->
+          <div class="rule" id="r1a-row" onclick="dtToggle('r1a')">
             <div class="ic ok" id="r1a-ic">✓</div>
-            <div class="body"><div class="t">Rule 1a — Regime filter</div><div class="d" id="r1a-d">Close &gt; SMA200 → <b class="pos">BULL</b></div></div>
+            <div class="body">
+              <div class="t">Rule 1a — Regime filter</div>
+              <div class="d" id="r1a-d">Close &gt; SMA200 → <b class="pos">BULL</b></div>
+              <div class="rule-detail" id="r1a-det">
+                <div class="rml" id="r1a-ml"></div>
+              </div>
+            </div>
+            <div class="rule-chev">›</div>
           </div>
-          <div class="rule">
+
+          <!-- Rule 1b — Trend filter -->
+          <div class="rule" id="r1b-row" onclick="dtToggle('r1b')">
             <div class="ic ok" id="r1b-ic">✓</div>
-            <div class="body"><div class="t">Rule 1b — Trend filter</div><div class="d" id="r1b-d">ADX ≥ 20 → <b class="pos">TRENDING</b></div></div>
+            <div class="body">
+              <div class="t">Rule 1b — Trend filter</div>
+              <div class="d" id="r1b-d">ADX ≥ 20 → <b class="pos">TRENDING</b></div>
+              <div class="rule-detail" id="r1b-det">
+                <div class="rml" id="r1b-ml"></div>
+              </div>
+            </div>
+            <div class="rule-chev">›</div>
           </div>
-          <div class="rule">
+
+          <!-- Rule 1c — Volatility cap -->
+          <div class="rule" id="r1c-row" onclick="dtToggle('r1c')">
             <div class="ic ok" id="r1c-ic">✓</div>
-            <div class="body"><div class="t">Rule 1c — Volatility cap</div><div class="d" id="r1c-d">Vol &lt; 2.0× → <b class="pos">PASS</b></div></div>
+            <div class="body">
+              <div class="t">Rule 1c — Volatility cap</div>
+              <div class="d" id="r1c-d">Vol &lt; 2.0× → <b class="pos">PASS</b></div>
+              <div class="rule-detail" id="r1c-det">
+                <div class="rule-gauge-wrap">
+                  <div class="rgl"><span id="r1c-gl">0×</span><span id="r1c-gr">cap 2.0×</span></div>
+                  <div class="rule-gauge-track"><div class="rule-gauge-fill rgf-ok" id="r1c-fill" style="width:0%"></div></div>
+                </div>
+                <div class="rml" id="r1c-ml"></div>
+              </div>
+            </div>
+            <div class="rule-chev">›</div>
           </div>
-          <div class="rule">
+
+          <!-- Rule 2 — Entry trigger -->
+          <div class="rule" id="r2-row" onclick="dtToggle('r2')">
             <div class="ic no" id="r2ic">✕</div>
-            <div class="body"><div class="t">Rule 2 — Long entry trigger</div><div class="d">Close ≤ Donchian20 high</div></div>
+            <div class="body">
+              <div class="t">Rule 2 — Entry trigger</div>
+              <div class="d" id="r2-d">Close ≤ Donchian-20 high</div>
+              <div class="rule-detail" id="r2-det">
+                <div class="rule-gauge-wrap">
+                  <div class="rgl"><span id="r2-gl">D20L</span><span id="r2-gr">D20H ▶</span></div>
+                  <div class="rule-gauge-track"><div class="rule-gauge-fill rgf-dim" id="r2-fill" style="width:0%"></div></div>
+                </div>
+                <div class="rml" id="r2-ml"></div>
+                <div class="rule-eta" id="r2-eta"></div>
+              </div>
+            </div>
+            <div class="rule-chev">›</div>
           </div>
+
+          <!-- Exit monitor (Rule 3) -->
+          <div class="rule" id="r3-row" onclick="dtToggle('r3')">
+            <div class="ic pend" id="r3-ic">·</div>
+            <div class="body">
+              <div class="t">Exit monitor</div>
+              <div class="d" id="r3-d">D10 low on deck: —</div>
+              <div class="rule-detail" id="r3-det">
+                <div class="rml" id="r3-ml"></div>
+              </div>
+            </div>
+            <div class="rule-chev">›</div>
+          </div>
+
           <div class="verdict wait" id="verdict">WAITING FOR BREAKOUT</div>
         </div>
       </div>
@@ -698,6 +777,43 @@ let barsLoaded = false;
 let sessionOpen = 0;
 
 /* ============================================================
+   DECISION TREE — utilities
+   ============================================================ */
+function dtToggle(id) {
+  const row = document.getElementById(id + '-row');
+  if (row) row.classList.toggle('open');
+}
+
+// Rolling close-price history for ETA estimation.
+// Populated from WS ticks; max 20 entries.
+const _closeHist = [];
+let   _closeHistLast = null;
+
+function _trackClose(c) {
+  if (c == null || c === _closeHistLast) return;
+  _closeHist.push({ c, t: Date.now() });
+  if (_closeHist.length > 20) _closeHist.shift();
+  _closeHistLast = c;
+}
+
+// Return estimated minutes to cover `gap` at the recent average pace,
+// or null when pace is zero, negative, or too few data points.
+function _etaMinutes(gap) {
+  if (gap <= 0 || _closeHist.length < 3) return null;
+  const n = Math.min(_closeHist.length, 8);
+  const h = _closeHist.slice(-n);
+  let rateSum = 0, cnt = 0;
+  for (let i = 1; i < h.length; i++) {
+    const dC = h[i].c - h[i-1].c;              // price change
+    const dM = (h[i].t - h[i-1].t) / 60000;   // time in minutes
+    if (dM > 0 && dC > 0) { rateSum += dC / dM; cnt++; }
+  }
+  if (!cnt) return null;
+  const eta = gap / (rateSum / cnt);
+  return (eta > 0 && eta < 10000) ? Math.round(eta) : null;
+}
+
+/* ============================================================
    LOAD HISTORICAL BARS FROM BACKEND
    ============================================================ */
 async function loadBars() {
@@ -819,7 +935,7 @@ function applyState(s) {
   document.getElementById('r-vol').textContent = s.vol_ratio ? s.vol_ratio.toFixed(2)+'×' : '—';
   document.getElementById('r-sma').textContent = s.sma200 ? fmt(s.sma200) : '—';
 
-  // ── Rule 1a — keep in sync with the header badge ─────────────────
+  // ── Rule 1a — regime filter ───────────────────────────────────────
   const r1a = document.getElementById('r1a-ic');
   const r1ad = document.getElementById('r1a-d');
   if (s.regime === 'BULL') {
@@ -832,27 +948,56 @@ function applyState(s) {
     r1a.textContent = '✕'; r1a.className = 'ic no';
     r1ad.innerHTML = `No clear trend → <b class="dim">NEUTRAL</b>`;
   }
+  // quantitative margin
+  if (s.close != null && s.sma200 != null) {
+    const m1a = s.close - s.sma200;
+    const s1a = m1a >= 0 ? '+' : '−';
+    const c1a = m1a >= 0 ? 'pos' : 'neg';
+    document.getElementById('r1a-ml').innerHTML =
+      `Close <b>${fmt(s.close)}</b> · SMA200 <b>${fmt(s.sma200)}</b> · <b class="${c1a}">${s1a}${fmt(Math.abs(m1a))} pts</b>`;
+  }
 
-  // ── Rule 1b ───────────────────────────────────────────────────────
+  // ── Rule 1b — trend filter ────────────────────────────────────────
   const r1b = document.getElementById('r1b-ic');
   const r1bd = document.getElementById('r1b-d');
-  const adxOk = s.adx != null && s.adx >= 20;
+  const adxThr = CONFIG.profile.adx_threshold || 20;
+  const adxOk  = s.adx != null && s.adx >= adxThr;
   r1b.textContent = adxOk ? '✓' : '✕';
   r1b.className   = adxOk ? 'ic ok' : 'ic no';
   r1bd.innerHTML  = adxOk
-    ? `ADX ${s.adx?.toFixed(1)} ≥ 20 → <b class="pos">TRENDING</b>`
-    : `ADX ${s.adx?.toFixed(1) ?? '—'} &lt; 20 → <b class="neg">CHOPPY</b>`;
+    ? `ADX ${s.adx?.toFixed(1)} ≥ ${adxThr} → <b class="pos">TRENDING</b>`
+    : `ADX ${s.adx?.toFixed(1) ?? '—'} &lt; ${adxThr} → <b class="neg">CHOPPY</b>`;
+  // quantitative margin
+  if (s.adx != null) {
+    const m1b = s.adx - adxThr;
+    const s1b = m1b >= 0 ? '+' : '−';
+    const c1b = m1b >= 0 ? 'pos' : m1b > -3 ? 'gold' : 'neg';
+    document.getElementById('r1b-ml').innerHTML =
+      `ADX <b>${s.adx.toFixed(1)}</b> · threshold <b>${adxThr}</b> · margin <b class="${c1b}">${s1b}${Math.abs(m1b).toFixed(1)}</b>`;
+  }
 
-  // ── Rule 1c ───────────────────────────────────────────────────────
+  // ── Rule 1c — volatility cap ──────────────────────────────────────
   const r1c = document.getElementById('r1c-ic');
   const r1cd = document.getElementById('r1c-d');
-  const volCap = CONFIG.profile.vol_ratio_cap;
+  const volCap = CONFIG.profile.vol_ratio_cap || 2.0;
   const volOk  = !s.vol_ratio || s.vol_ratio < volCap;
   r1c.textContent = volOk ? '✓' : '✕';
   r1c.className   = volOk ? 'ic ok' : 'ic no';
   r1cd.innerHTML  = volOk
     ? `Vol ${s.vol_ratio?.toFixed(2) ?? '—'}× &lt; ${volCap}× → <b class="pos">PASS</b>`
     : `Vol ${s.vol_ratio?.toFixed(2)}× ≥ ${volCap}× → <b class="neg">BLOCKED</b>`;
+  // gauge
+  if (s.vol_ratio != null) {
+    const pct1c = Math.min(110, (s.vol_ratio / volCap) * 100);
+    const fc1c  = pct1c < 50 ? 'rgf-ok' : pct1c < 80 ? 'rgf-warn' : 'rgf-bad';
+    document.getElementById('r1c-gl').textContent = `${s.vol_ratio.toFixed(2)}×`;
+    document.getElementById('r1c-gr').textContent = `cap ${volCap}×`;
+    const f1c = document.getElementById('r1c-fill');
+    f1c.style.width = Math.min(100, pct1c) + '%';
+    f1c.className = 'rule-gauge-fill ' + fc1c;
+    document.getElementById('r1c-ml').innerHTML =
+      `${s.vol_ratio.toFixed(2)}× of ${volCap}× cap · <b class="${fc1c === 'rgf-ok' ? 'pos' : fc1c === 'rgf-bad' ? 'neg' : 'gold'}">${Math.round(pct1c)}% of limit used</b>`;
+  }
 
   // ── Rule 2 + verdict — gated on whether a position is already open ─
   const r2 = document.getElementById('r2ic');
@@ -882,6 +1027,64 @@ function applyState(s) {
     verdict.style.cssText = '';
     document.getElementById('t-state').textContent = 'WAITING FOR BREAKOUT';
     document.getElementById('t-state').className = 'trig wait';
+  }
+
+  // ── Rule 2 — entry-trigger gauge + margin + ETA ──────────────────
+  if (s.close != null && s.donchian_high != null && s.donchian20_l != null) {
+    const d20h  = s.donchian_high;
+    const d20l  = s.donchian20_l;
+    const range = d20h - d20l;
+    const prog  = range > 0
+      ? Math.max(0, Math.min(100, (s.close - d20l) / range * 100))
+      : 0;
+    const gap   = d20h - s.close;
+    const gapAtr = (s.atr > 0 && gap > 0) ? gap / s.atr : null;
+    const fc2   = prog >= 90 ? 'rgf-ok' : prog >= 50 ? 'rgf-warn' : 'rgf-dim';
+
+    document.getElementById('r2-gl').textContent = '$' + fmt(d20l);
+    document.getElementById('r2-gr').textContent = '$' + fmt(d20h) + ' ▶';
+    const f2 = document.getElementById('r2-fill');
+    f2.style.width = prog.toFixed(1) + '%';
+    f2.className = 'rule-gauge-fill ' + fc2;
+
+    const r2ml = document.getElementById('r2-ml');
+    if (gap > 0) {
+      r2ml.innerHTML = `Gap <b>$${fmt(gap)}</b>` +
+        (gapAtr != null ? ` · <b>${gapAtr.toFixed(2)}× ATR</b>` : '');
+    } else {
+      r2ml.innerHTML = `<b class="pos">Breakout level reached</b>`;
+    }
+
+    const eta = _etaMinutes(Math.max(0, gap));
+    const r2eta = document.getElementById('r2-eta');
+    if (eta != null && gap > 0) {
+      r2eta.innerHTML = `<span class="etav">~${eta}m</span> at avg pace <span class="etae">(estimate)</span>`;
+    } else if (gap <= 0) {
+      r2eta.textContent = '';
+    } else {
+      r2eta.innerHTML = `<span class="etae">pace data accumulating…</span>`;
+    }
+  }
+
+  // ── Exit monitor (Rule 3) ─────────────────────────────────────────
+  const r3ic = document.getElementById('r3-ic');
+  const r3d  = document.getElementById('r3-d');
+  const r3ml = document.getElementById('r3-ml');
+  if (s.has_position && s.position_stop != null && s.close != null) {
+    const dStop = Math.abs(s.close - s.position_stop);
+    const dAtr  = (s.atr > 0) ? dStop / s.atr : null;
+    r3ic.textContent = '⚑'; r3ic.className = 'ic pend';
+    r3d.innerHTML = `Stop <b class="mono neg">$${fmt(s.position_stop)}</b> · <b class="neg">$${fmt(dStop)}</b> away`;
+    r3ml.innerHTML = `Hard stop $${fmt(s.position_stop)}` +
+      (dAtr != null ? ` · <b class="mono">${dAtr.toFixed(2)}× ATR</b>` : '') +
+      ` · $${fmt(dStop)} from current $${fmt(s.close)}`;
+  } else if (s.donchian10_l != null && s.close != null) {
+    const d10l  = s.donchian10_l;
+    const dFloor = s.close - d10l;
+    r3ic.textContent = '·'; r3ic.className = 'ic pend';
+    r3d.innerHTML = `D10 low on deck: <b class="mono">$${fmt(d10l)}</b>`;
+    r3ml.innerHTML = `Current $${fmt(s.close)} · D10L $${fmt(d10l)} · ` +
+      `<b class="${dFloor >= 0 ? 'pos' : 'neg'}">${dFloor >= 0 ? '+' : '−'}$${fmt(Math.abs(dFloor))}</b> above floor`;
   }
 
   // ── telemetry distance ───────────────────────────────────────────
@@ -1012,17 +1215,23 @@ function connectWS() {
 
     // ── Strategy state (always reflects live engine) ──────────────────────
     const ind = d.indicators || {};
+    _trackClose(ind.close ?? null);   // feed ETA estimator
     applyState({
       regime:          d.regime,
       adx:             d.adx,
       atr:             ind.atr14,
       vol_ratio:       ind.vol_ratio,
       sma200:          ind.sma200,
+      close:           ind.close,
       donchian_high:   ind.donchian20_h,
+      donchian20_l:    ind.donchian20_l,
+      donchian10_h:    ind.donchian10_h,
+      donchian10_l:    ind.donchian10_l,
       dist_to_trigger: d.proximity?.distance,
       rule2_triggered: d.proximity?.triggered,
       has_position:    !!(d.position && d.position.side),
       position_side:   d.position?.side ?? null,
+      position_stop:   d.position?.hard_stop ?? null,
     });
 
     // ── Equity sparkline (always live) ────────────────────────────────────
