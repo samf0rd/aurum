@@ -7,7 +7,7 @@ Two profiles exist — Swing (H1) is the backtested, validated strategy.
 Intraday (M15) runs the identical rule structure on a faster timeframe;
 it must clear the same validation gates before being treated as proven.
 
-Select via env var:  STRATEGY_PROFILE=swing  (default)  or  intraday
+Select via env var:  STRATEGY_PROFILE=intraday  (default)  or  swing
 """
 from __future__ import annotations
 
@@ -29,6 +29,12 @@ class StrategyProfile:
     atr_stop_mult:   float
     vol_ratio_cap:   float
     risk_per_trade:  float
+    # 0 = enter on breakout bar close (default, preserves original behaviour).
+    # N = wait N additional bars; only enter if close still holds above the
+    # breakout band on every bar through bar+N.
+    entry_confirmation_bars: int = 0
+    # When True, TRENDING_BEAR signals are suppressed — only LONG entries fire.
+    long_only: bool = False
 
 
 # ── Validated strategy — DO NOT CHANGE THESE NUMBERS ──────────────────

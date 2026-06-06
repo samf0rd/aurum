@@ -24,7 +24,7 @@ from core.interfaces import (
     Bar, ISignalGenerator, IRegimeDetector, Regime,
     Signal, SignalType
 )
-from core.config import ACTIVE_PROFILE
+from core.config import ACTIVE_PROFILE, StrategyProfile
 
 
 # ──────────────────────────────────────────────────────────────────
@@ -132,6 +132,25 @@ def adx(bars: Sequence[Bar], period: int = 14) -> float:
     return float(adx_arr[-1])
 
 
+def _atr_series(bars: Sequence[Bar], period: int = 14) -> np.ndarray:
+    """Return the full Wilder ATR series (same algorithm as atr(), vectorized)."""
+    if len(bars) < period + 1:
+        return np.array([])
+    highs  = _highs(bars)
+    lows   = _lows(bars)
+    closes = _closes(bars)
+    tr = np.maximum(
+        highs[1:] - lows[1:],
+        np.maximum(np.abs(highs[1:] - closes[:-1]), np.abs(lows[1:] - closes[:-1]))
+    )
+    result = np.zeros(len(tr))
+    result[period - 1] = float(np.mean(tr[:period]))
+    alpha = 1.0 / period
+    for i in range(period, len(tr)):
+        result[i] = alpha * tr[i] + (1.0 - alpha) * result[i - 1]
+    return result
+
+
 def vol_ratio(bars: Sequence[Bar], lookback: int = 100) -> float:
     """
     Rule 1c: current ATR/Close ratio vs its 100-day median.
@@ -141,17 +160,22 @@ def vol_ratio(bars: Sequence[Bar], lookback: int = 100) -> float:
     if len(bars) < lookback + 15:
         return 1.0
 
-    atr14    = atr(bars, 14)
-    close    = float(bars[-1].close)
-    today    = atr14 / close if close > 0 else 0
+    # Precompute full ATR series once (O(n)) instead of 100 separate atr() calls
+    atr_vals  = _atr_series(bars, 14)
+    if len(atr_vals) < lookback + 1:
+        return 1.0
 
-    # Historical ATR/Close ratios (each day in the lookback window)
-    ratios   = []
-    for i in range(lookback):
-        idx   = len(bars) - lookback + i
-        a     = atr(bars[:idx], 14)
-        c     = float(bars[idx - 1].close)
-        ratios.append(a / c if c > 0 else 0)
+    closes = _closes(bars)
+    # Match original indexing: old code used ATR/close at bars[N-101+i] for i=0..99
+    # atr_vals[j] = ATR at bars[j+1], so ATR at bars[N-101+i] = atr_vals[N-102+i]
+    # = atr_vals[-lookback-1:-1]; closes at bars[N-101+i] = closes[-lookback-1:-1]
+    atr_hist   = atr_vals[-lookback - 1:-1]
+    close_hist = closes[-lookback - 1:-1]
+    ratios     = np.where(close_hist > 0, atr_hist / close_hist, 0.0)
+
+    today_atr   = atr_vals[-1]
+    today_close = float(bars[-1].close)
+    today       = today_atr / today_close if today_close > 0 else 0.0
 
     median = float(np.median(ratios))
     return today / median if median > 0 else 1.0
@@ -209,18 +233,26 @@ class DonchianBreakoutSignalGenerator(ISignalGenerator):
     Entry  (Rule 2):  Close > Donchian-20 high (long) or < Donchian-20 low (short)
     Exit 3a (Rule 3a): Close < Donchian-10 low (long) or > Donchian-10 high (short)
     Exit 3b (Rule 3b): Close crosses 200-SMA against position
-    """
 
-    ENTRY_PERIOD    = ACTIVE_PROFILE.donchian_entry
-    EXIT_PERIOD     = ACTIVE_PROFILE.donchian_exit
-    ATR_PERIOD      = ACTIVE_PROFILE.atr_period
-    SMA_PERIOD      = ACTIVE_PROFILE.sma_period
-    ATR_STOP_MULT   = Decimal(str(ACTIVE_PROFILE.atr_stop_mult))
+    Pass a StrategyProfile to override any parameter (including
+    entry_confirmation_bars). Defaults to ACTIVE_PROFILE so existing
+    call sites that pass no arguments continue to work unchanged.
+    """
 
     TRADEABLE_REGIMES = {
         Regime.TRENDING_BULL,
         Regime.TRENDING_BEAR,
     }
+
+    def __init__(self, profile: StrategyProfile | None = None) -> None:
+        _p = profile if profile is not None else ACTIVE_PROFILE
+        self.ENTRY_PERIOD       = _p.donchian_entry
+        self.EXIT_PERIOD        = _p.donchian_exit
+        self.ATR_PERIOD         = _p.atr_period
+        self.SMA_PERIOD         = _p.sma_period
+        self.ATR_STOP_MULT      = Decimal(str(_p.atr_stop_mult))
+        self._confirmation_bars = _p.entry_confirmation_bars
+        self._long_only         = _p.long_only
 
     def compute_indicators(self, bars: Sequence[Bar]) -> dict:
         closes = _closes(bars)
@@ -247,17 +279,22 @@ class DonchianBreakoutSignalGenerator(ISignalGenerator):
         if regime not in self.TRADEABLE_REGIMES:
             return self._no_signal(bars, regime, f"regime={regime.name}")
 
+        if self._long_only and regime == Regime.TRENDING_BEAR:
+            return self._no_signal(bars, regime, "long_only: bear signals suppressed")
+
         ind    = self.compute_indicators(bars)
         last   = bars[-1]
         close  = float(last.close)
         atr14  = Decimal(str(round(ind["atr14"], 4)))
         stop_d = atr14 * self.ATR_STOP_MULT
 
-        # ── Check exit conditions first (open position handled in orchestrator)
-        # These are evaluated by the orchestrator against the active Position;
-        # the signal generator returns the raw directional signal only.
+        if self._confirmation_bars > 0:
+            confirmed = self._check_confirmation(bars, regime, ind)
+            if confirmed is not None:
+                return confirmed
+            return self._no_signal(bars, regime, "no confirmed breakout")
 
-        # ── Entry: Donchian-20 breakout in regime direction
+        # ── Entry: Donchian-20 breakout in regime direction (confirmation=0)
         if regime == Regime.TRENDING_BULL:
             if close > ind["donchian20_h"]:
                 return Signal(
@@ -291,6 +328,98 @@ class DonchianBreakoutSignalGenerator(ISignalGenerator):
                 )
 
         return self._no_signal(bars, regime, "no breakout")
+
+    def _check_confirmation(
+        self,
+        bars: Sequence[Bar],
+        regime: Regime,
+        ind: dict,
+    ) -> "Signal | None":
+        """
+        Stateless lookback confirmation for entry_confirmation_bars = N (N ≥ 1).
+
+        Checks that:
+          1. bars[-N-1] (the bar N steps before the current bar) closed above
+             (LONG) or below (SHORT) the Donchian-20 band as it stood at that
+             bar's time.
+          2. Every bar from bars[-N] through bars[-1] (the current bar) still
+             closes on the correct side of that original breakout band level.
+
+        Returns a Signal if all conditions hold, None otherwise.
+        The signal is timestamped to the current bar so fill semantics are
+        identical to the confirmation=0 path.
+        """
+        n = self._confirmation_bars
+        # Need one extra bar (bars[-n-2]) to verify the fresh-breakout condition.
+        if len(bars) < self.SMA_PERIOD + self.ENTRY_PERIOD + 10 + n + 1:
+            return None
+
+        # bars[:-n] ends at bars[-n-1], the breakout-candidate bar.
+        # donchian_high/low on this sub-window gives the band that bar
+        # was compared against (same computation on_bar would have done
+        # at that earlier point in time).
+        breakout_window = bars[:-n]         # window whose last bar is the breakout candidate
+        pre_window      = bars[:-n - 1]     # window whose last bar is the bar BEFORE the breakout
+        breakout_close  = float(breakout_window[-1].close)
+        pre_close       = float(pre_window[-1].close)   # close of the bar before the breakout
+        conf_bars       = bars[-n:]         # the N confirmation bars, incl. current
+
+        last   = bars[-1]
+        atr14  = Decimal(str(round(ind["atr14"], 4)))
+        stop_d = atr14 * self.ATR_STOP_MULT
+
+        if regime == Regime.TRENDING_BULL:
+            band     = donchian_high(breakout_window, self.ENTRY_PERIOD)
+            pre_band = donchian_high(pre_window,      self.ENTRY_PERIOD)
+            if breakout_close <= band:
+                return None  # breakout bar didn't actually break out
+            # Fresh-breakout guard: the bar before the breakout candidate must
+            # have been BELOW its own Donchian band.  This ensures we only signal
+            # on the first crossing, preventing re-triggers on every bar of a
+            # sustained uptrend (which would cause double the trades vs confirmation=0).
+            if pre_close > pre_band:
+                return None
+            for cb in conf_bars:
+                if float(cb.close) <= band:
+                    return None  # price retraced through breakout level
+            return Signal(
+                signal_type   = SignalType.ENTER_LONG,
+                timestamp     = last.timestamp,
+                symbol        = last.symbol,
+                regime        = regime,
+                atr           = atr14,
+                stop_distance = stop_d,
+                reason        = (
+                    f"Long breakout confirmed after {n} bar(s): "
+                    f"breakout_close={breakout_close:.2f} > band={band:.2f}"
+                ),
+            )
+
+        if regime == Regime.TRENDING_BEAR:
+            band     = donchian_low(breakout_window, self.ENTRY_PERIOD)
+            pre_band = donchian_low(pre_window,      self.ENTRY_PERIOD)
+            if breakout_close >= band:
+                return None
+            # Fresh-breakout guard for shorts: bar before must have been ABOVE its band.
+            if pre_close < pre_band:
+                return None
+            for cb in conf_bars:
+                if float(cb.close) >= band:
+                    return None
+            return Signal(
+                signal_type   = SignalType.ENTER_SHORT,
+                timestamp     = last.timestamp,
+                symbol        = last.symbol,
+                regime        = regime,
+                atr           = atr14,
+                stop_distance = stop_d,
+                reason        = (
+                    f"Short breakout confirmed after {n} bar(s): "
+                    f"breakout_close={breakout_close:.2f} < band={band:.2f}"
+                ),
+            )
+
+        return None
 
     def should_exit(
         self,
