@@ -1,0 +1,16 @@
+---
+id: exp-003
+description: "Test entry_confirmation_bars=2 — find diminishing returns point"
+date: 2026-06-06
+profile: swing
+from: 2024-06-06
+to: 2025-12-31
+strategy_overrides:
+  entry_confirmation_bars: 2
+  donchian_entry: 20
+  adx_threshold: 25
+notes: >
+  Same H1 window as EXP-002 for direct comparison. Hypothesis: confirmation=2
+  will further reduce trade count and may improve or worsen PF. If PF drops
+  vs EXP-002, the sweet spot is confirmation=1. If PF holds or rises,
+  try confirmation=3.
