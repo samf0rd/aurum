@@ -1,0 +1,19 @@
+---
+id: exp-004
+description: "Long-only filter — remove short-side drag, isolate TRENDING_BULL edge"
+date: 2026-06-06
+profile: swing
+from: 2024-06-06
+to: 2025-12-31
+strategy_overrides:
+  entry_confirmation_bars: 1
+  donchian_entry: 20
+  adx_threshold: 25
+  long_only: true
+notes: >
+  Identical window to EXP-002/003 for clean comparison. Hypothesis: removing
+  TRENDING_BEAR entries eliminates 0.2-0.3 PF drag and surfaces the clean
+  bull-continuation edge. TRENDING_BULL PF 1.49 in EXP-002 is the floor
+  expectation. Risk: short-side signals may have been providing regime
+  information that filters bad long entries - watch whether long trade
+  count increases or decreases vs EXP-002's long-only subset.
