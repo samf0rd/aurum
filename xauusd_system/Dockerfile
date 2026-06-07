@@ -47,6 +47,8 @@ RUN pip install --upgrade pip setuptools wheel && pip install .
 
 COPY src/ ./src/
 COPY config/ ./config/
+# Deployment backtest — required for dashboard REPLAY tab
+COPY results/exp-020.json ./results/exp-020.json
 
 # Logs directory owned by non-root user
 RUN mkdir -p /app/logs /app/data && chown -R trader:trader /app/logs /app/data
