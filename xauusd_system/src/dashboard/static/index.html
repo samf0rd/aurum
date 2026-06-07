@@ -468,6 +468,12 @@
         <div class="card-h">Capacity</div>
         <div id="posbox"></div>
       </div>
+
+      <!-- Year-by-year breakdown — shown in REPLAY mode only -->
+      <div class="card" id="yearly-card" style="display:none">
+        <div class="card-h">Year-by-Year Performance</div>
+        <div id="yearly-table" style="font-family:var(--mono);font-size:12px"></div>
+      </div>
     </div>
 
     <!-- CENTRE: decision tree · trade history -->
@@ -546,12 +552,6 @@
       <div class="card">
         <div class="card-h row"><span>Trade History</span><span class="faint">0 shown</span></div>
         <div class="trades"><div class="trades-empty">No closed trades yet</div></div>
-      </div>
-
-      <!-- Year-by-year breakdown — shown in REPLAY mode only -->
-      <div class="card" id="yearly-card" style="display:none">
-        <div class="card-h">Year-by-Year Performance</div>
-        <div id="yearly-table" style="font-family:var(--mono);font-size:12px"></div>
       </div>
     </div>
 
@@ -816,14 +816,18 @@ function setTab(tab) {
   document.getElementById('tabReplay').classList.toggle('active',   isReplay);
   document.getElementById('tabStrategy').classList.toggle('active', isStrategy);
 
-  const termEl  = document.getElementById('view-terminal');
-  const stratEl = document.getElementById('view-strategy');
-  const refEl   = document.getElementById('view-reference');
-  const sbEl    = document.getElementById('statusbar');
-  if (termEl)  termEl.style.display  = isStrategy ? 'none' : '';
-  if (stratEl) stratEl.style.display = isStrategy ? ''     : 'none';
-  if (refEl)   refEl.style.display   = isStrategy ? ''     : 'none';
-  if (sbEl)    sbEl.style.display    = isStrategy ? 'none' : '';
+  const termEl    = document.getElementById('view-terminal');
+  const stratEl   = document.getElementById('view-strategy');
+  const refEl     = document.getElementById('view-reference');
+  const sbEl      = document.getElementById('statusbar');
+  const metEl     = document.getElementById('metrics-strip');
+  const bannerEl  = document.getElementById('replay-banner');
+  if (termEl)   termEl.style.display   = isStrategy ? 'none' : '';
+  if (stratEl)  stratEl.style.display  = isStrategy ? ''     : 'none';
+  if (refEl)    refEl.style.display    = isStrategy ? ''     : 'none';
+  if (sbEl)     sbEl.style.display     = isStrategy ? 'none' : '';
+  if (metEl)    metEl.style.display    = isStrategy ? 'none' : '';
+  if (bannerEl) bannerEl.style.display = isStrategy ? 'none' : '';
 
   if (isStrategy) {
     scrubPause();
@@ -1363,8 +1367,9 @@ function renderYearByYear(trades) {
 
 // ── Chart fallback helpers ────────────────────────────────────────────────────
 function _showEquityCurveInChart() {
+  // Equity curve IS the data in REPLAY mode — do not show the "no data" overlay
   const noDataEl = document.getElementById('chart-no-data');
-  if (noDataEl) { noDataEl.style.display = 'flex'; }
+  if (noDataEl) noDataEl.style.display = 'none';
   // Use the sma line series to display the equity curve in the main chart pane
   if (replayState.equityCurve && replayState.equityCurve.length) {
     sma.setData(replayState.equityCurve);
