@@ -6,6 +6,9 @@ Twelve Data (real XAU/USD prices, no OANDA dependency).
 from __future__ import annotations
 import asyncio, json, logging, os, sys, time
 from decimal import Decimal
+from pathlib import Path
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 
 def _setup_logging() -> None:
@@ -68,10 +71,6 @@ async def main() -> None:
     )
     risk = RiskEngine(initial_equity=cfg["equity"], config=risk_cfg)
 
-    # Wrap with adapter so orchestrator's IRiskEngine interface is satisfied
-    from risk import RiskEngineAdapter
-    risk = RiskEngineAdapter(risk)
-
     # Broker — always PaperBroker for now (live broker wired separately when needed)
     from paper.paper_broker import PaperBrokerAdapter
     broker = PaperBrokerAdapter(initial_equity=cfg["equity"])
@@ -83,10 +82,9 @@ async def main() -> None:
 
     async def _on_fill(fill) -> None:
         try:
-            from decimal import Decimal as D
-            pnl = D(str(getattr(fill, "realized_pnl", 0)))
-            risk.record_trade_result(pnl=pnl)
-        except Exception as e:
+            pnl = Decimal(str(getattr(fill, "realized_pnl", 0)))
+            risk.record_position_closed(realized_pnl=pnl)
+        except (ValueError, TypeError) as e:
             logger.warning("on_fill error: %s", e)
 
     async def _on_reject(order, reason: str) -> None:

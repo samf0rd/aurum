@@ -1,0 +1,34 @@
+---
+id: exp-020
+description: "H1 trend gate — EXP-010 config + entry only when price > H1 200-SMA"
+date: 2026-06-07
+profile: intraday
+from: 2020-01-01
+to: 2025-12-31
+research_mode: true
+strategy_overrides:
+  entry_confirmation_bars: 3
+  donchian_entry: 20
+  adx_threshold: 25
+  long_only: true
+  h1_trend_gate: true
+notes: |
+  Hypothesis: an M15 breakout that aligns with an H1 uptrend is structurally
+  different from one fighting the H1 direction. Adding H1 SMA-200 as an
+  alignment gate filters counter-trend M15 entries.
+
+  The existing M15 SMA-200 regime filter covers ~50 hours (200 × 15min).
+  H1 SMA-200 covers ~200 hours (~8 trading days) — 4x slower, filters
+  longer-term counter-trend periods.
+
+  Implementation:
+  - H1 SMA-200 pre-computed before backtest by resampling M15 → H1 closes
+  - Each M15 bar maps to its hour's H1 SMA value via pre-computed lookup dict
+  - Gate: if price < H1 SMA-200, no entry signal fires
+  - Warmup bars (before 200 H1 bars) are always allowed through
+
+  Combined with M15 SMA-200 + ADX regime filter, this adds a third
+  trend-confirmation layer across a different timescale.
+
+  Primary success metric: strip-top-3 PF > 1.0
+  Secondary: false-breakout rate below 65%

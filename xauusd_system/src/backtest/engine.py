@@ -120,9 +120,11 @@ class BacktestEngine:
 
     def __init__(
         self,
-        profile:     StrategyProfile = SWING,
-        initial_equity: float        = 100_000.0,
-        cost_model:  Optional[CostModel] = None,
+        profile:        StrategyProfile  = SWING,
+        initial_equity: float            = 100_000.0,
+        cost_model:     Optional[CostModel] = None,
+        risk_config:    Optional[RiskConfig] = None,
+        h1_sma_lookup:  Optional[dict]   = None,
     ) -> None:
         self._profile  = profile
         self._eq0      = initial_equity
@@ -130,10 +132,10 @@ class BacktestEngine:
 
         # Live components — same objects the orchestrator uses
         self._regime  = RegimeDetector()
-        self._signals = DonchianBreakoutSignalGenerator(profile=profile)
+        self._signals = DonchianBreakoutSignalGenerator(profile=profile, h1_sma_lookup=h1_sma_lookup)
         self._risk    = RiskEngine(
             initial_equity = Decimal(str(initial_equity)),
-            config         = RiskConfig(
+            config         = risk_config or RiskConfig(
                 risk_pct_normal      = Decimal(str(profile.risk_per_trade)),
                 daily_loss_limit_pct = Decimal("0.02"),
                 weekly_loss_limit_pct= Decimal("0.05"),
@@ -263,6 +265,8 @@ class BacktestEngine:
 
             # ── CLOSE of bar i: strategy evaluation ───────────────────────
             regime = self._regime.detect(window)
+            if hasattr(self._signals, "accumulate"):
+                self._signals.accumulate(bar)
 
             if open_pos is not None:
                 # Ratchet trailing stop (Donchian-10, same logic as live)

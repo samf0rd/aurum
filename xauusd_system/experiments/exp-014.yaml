@@ -1,0 +1,39 @@
+---
+id: exp-014
+description: "Pre-2020 regime test — long-only Donchian-20 on daily bars, 2015-2019"
+date: 2026-06-07
+profile: intraday
+from: 2015-01-01
+to: 2019-12-31
+research_mode: true
+strategy_overrides:
+  timeframe: D
+  bar_seconds: 86400
+  donchian_entry: 20
+  donchian_exit: 10
+  adx_threshold: 25
+  long_only: true
+  entry_confirmation_bars: 1
+notes: |
+  M15 data is only available from ~2020 via Twelve Data API.
+  EXP-014 uses daily (D1) bars as the closest available proxy for 2015-2019.
+
+  The strategy structure is identical: long-only Donchian-20 breakout with
+  ADX>=25 filter and 1-bar confirmation (1 daily confirmation bar instead of
+  3 M15 bars). The lookback periods (d=20, ATR=14, SMA=200) are appropriate
+  for daily bars. This tests the same fundamental question:
+
+  "Does a long-only Donchian breakout system survive gold's 2015-2018 bear?"
+
+  Gold price context 2015-2019:
+  - 2015: $1,300 → $1,050 (secular low in Dec 2015)
+  - 2016: $1,050 → $1,150 (recovery post-Brexit spike, then declined)
+  - 2017: Range $1,150-$1,350 (gradual recovery)
+  - 2018: $1,360 → $1,180 (USD strength, Fed rate hikes)
+  - 2019: $1,280 → $1,520 (Fed pivot, trade war; June breakout to $1,550+)
+
+  Expected: 2015, 2016 (H2), 2017 (partial), 2018 negative.
+  2019 should be positive if the June-September gold breakout fires.
+
+  Daily bars change absolute P&L scaling (fewer trades, larger R per trade)
+  but the directional question (bull vs bear year correlation) remains valid.

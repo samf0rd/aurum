@@ -89,18 +89,22 @@ def build_app(state: SystemState, data_feed=None, risk_config=None) -> FastAPI:
         UI always shows exactly the values the engine enforces — never hardcoded.
         """
         profile = {
-            "name":           ACTIVE_PROFILE.name,
-            "timeframe":      ACTIVE_PROFILE.timeframe,
-            "bar_seconds":    ACTIVE_PROFILE.bar_seconds,
-            "sma_period":     ACTIVE_PROFILE.sma_period,
-            "adx_period":     ACTIVE_PROFILE.adx_period,
-            "adx_threshold":  ACTIVE_PROFILE.adx_threshold,
-            "donchian_entry": ACTIVE_PROFILE.donchian_entry,
-            "donchian_exit":  ACTIVE_PROFILE.donchian_exit,
-            "atr_period":     ACTIVE_PROFILE.atr_period,
-            "atr_stop_mult":  ACTIVE_PROFILE.atr_stop_mult,
-            "vol_ratio_cap":  ACTIVE_PROFILE.vol_ratio_cap,
-            "risk_per_trade": ACTIVE_PROFILE.risk_per_trade,
+            "name":                    ACTIVE_PROFILE.name,
+            "timeframe":               ACTIVE_PROFILE.timeframe,
+            "bar_seconds":             ACTIVE_PROFILE.bar_seconds,
+            "sma_period":              ACTIVE_PROFILE.sma_period,
+            "adx_period":              ACTIVE_PROFILE.adx_period,
+            "adx_threshold":           ACTIVE_PROFILE.adx_threshold,
+            "donchian_entry":          ACTIVE_PROFILE.donchian_entry,
+            "donchian_exit":           ACTIVE_PROFILE.donchian_exit,
+            "atr_period":              ACTIVE_PROFILE.atr_period,
+            "atr_stop_mult":           ACTIVE_PROFILE.atr_stop_mult,
+            "vol_ratio_cap":           ACTIVE_PROFILE.vol_ratio_cap,
+            "risk_per_trade":          ACTIVE_PROFILE.risk_per_trade,
+            "entry_confirmation_bars": ACTIVE_PROFILE.entry_confirmation_bars,
+            "long_only":               ACTIVE_PROFILE.long_only,
+            "h1_trend_gate":           ACTIVE_PROFILE.h1_trend_gate,
+            "session_filter":          ACTIVE_PROFILE.session_filter,
         }
         risk: dict = {}
         if _risk_config is not None:
@@ -126,6 +130,57 @@ def build_app(state: SystemState, data_feed=None, risk_config=None) -> FastAPI:
 
     @app.get("/api/stats")
     async def stats(): return _state.get_stats()
+
+    @app.get("/api/replay")
+    async def replay():
+        """
+        Serve backtest replay data for the dashboard REPLAY tab.
+
+        Checks in order:
+          1. replay_fixture.json (manually generated, takes priority)
+          2. results/exp-020.json (deployment backtest — EXP-020 config 2020-2025)
+        """
+        for candidate in [
+            Path("replay_fixture.json"),
+            Path("../replay_fixture.json"),
+            Path(__file__).parents[3] / "replay_fixture.json",
+        ]:
+            if candidate.exists():
+                return json.loads(candidate.read_text(encoding="utf-8"))
+        # Fallback: serve EXP-020 deployment results (trades + stats only;
+        # equity_curve is 200k+ entries and would make the response too large)
+        for candidate in [
+            Path("results/exp-020.json"),
+            Path(__file__).parents[2] / "results" / "exp-020.json",
+        ]:
+            if candidate.exists():
+                data = json.loads(candidate.read_text(encoding="utf-8"))
+                return {
+                    "source":     data.get("source"),
+                    "start_date": data.get("start_date"),
+                    "end_date":   data.get("end_date"),
+                    "stats":      data.get("stats"),
+                    "trades":     data.get("trades", []),
+                }
+        return {"error": "No replay data found — place results/exp-020.json or replay_fixture.json in the project"}
+
+    @app.get("/api/validation")
+    async def validation():
+        """Serve the most recent validation report produced by `python -m backtest.validate`."""
+        import glob as _glob
+        candidates = sorted(_glob.glob("validation_*.json"), reverse=True)
+        if not candidates:
+            for candidate in [
+                Path("../validation_swing.json"),
+                Path(__file__).parents[3] / "validation_swing.json",
+            ]:
+                if candidate.exists():
+                    return json.loads(candidate.read_text(encoding="utf-8"))
+            return {
+                "validated": None,
+                "error": "No validation report found — run: python -m backtest.validate",
+            }
+        return json.loads(Path(candidates[0]).read_text(encoding="utf-8"))
 
     @app.get("/api/position")
     async def position():

@@ -1,0 +1,28 @@
+---
+id: exp-018
+description: "Vol-ratio floor filter — EXP-010 config + entry only when vol_ratio >= 1.3"
+date: 2026-06-07
+profile: intraday
+from: 2020-01-01
+to: 2025-12-31
+research_mode: true
+strategy_overrides:
+  entry_confirmation_bars: 3
+  donchian_entry: 20
+  adx_threshold: 25
+  long_only: true
+  vol_ratio_floor: 1.3
+notes: |
+  Hypothesis: a real breakout tends to come with above-average volatility.
+  vol_ratio = current ATR/Close ÷ median ATR/Close over rolling 100-bar window.
+  vol_ratio >= 1.3 means ATR is currently 30% above its rolling median.
+
+  The vol_ratio_cap (2.0) already blocks HIGH_VOL regime entries via the
+  regime detector. This adds a FLOOR that blocks LOW_VOL entries where
+  the market is grinding and breakouts are likely to reverse.
+
+  Infrastructure already exists (vol_ratio() computed in signal_generator.py).
+  This is a single new threshold check before compute_indicators().
+
+  Primary success metric: strip-top-3 PF > 1.0
+  Secondary: false-breakout rate below 65%, trade count reduction < 50%

@@ -1,0 +1,24 @@
+---
+id: exp-010
+description: "M15 long-only isolation — TRENDING_BULL only, confirmation=3 (research mode)"
+date: 2026-06-07
+profile: intraday
+from: 2020-01-01
+to: 2025-12-31
+research_mode: true
+strategy_overrides:
+  entry_confirmation_bars: 3
+  donchian_entry: 20
+  adx_threshold: 25
+  long_only: true
+notes: |
+  EXP-007 showed TRENDING_BEAR (729 trades, PF 0.75) is the primary drag on overall
+  PF. TRENDING_BULL with confirmation=3 is already PF 1.06 with 909 trades.
+
+  Hypothesis: running long_only=True removes the bear-side drag entirely.
+  In TRENDING_BULL regime, the system should only take long entries, which is where
+  the structural edge sits. Expected PF: 1.1–1.3 based on EXP-007 regime isolation.
+
+  Note: EXP-004 tested long_only on H1 and was rejected (H1 long side was broken).
+  M15 is a different timeframe with different structural identity — TRENDING_BULL
+  PF 1.06 at 909 trades gives reasonable confidence the long side is viable here.

@@ -1,0 +1,32 @@
+---
+id: exp-019
+description: "Session filter — EXP-010 config + entry only during London (08-12 UTC) or NY (13-17 UTC)"
+date: 2026-06-07
+profile: intraday
+from: 2020-01-01
+to: 2025-12-31
+research_mode: true
+strategy_overrides:
+  entry_confirmation_bars: 3
+  donchian_entry: 20
+  adx_threshold: 25
+  long_only: true
+  session_filter: true
+notes: |
+  Hypothesis: M15 gold has different microstructure at different trading sessions.
+  London open (08:00-12:00 UTC) and NY open (13:00-17:00 UTC) should produce
+  higher-quality breakouts than Asian session or mid-afternoon lull.
+
+  Session windows (UTC):
+  - London: 08:00-11:59 UTC (inclusive of 8,9,10,11 hours)
+  - NY:     13:00-16:59 UTC (inclusive of 13,14,15,16 hours)
+  - Blocked: 00-07 UTC (Asian session), 12 UTC (lunch), 17-23 UTC (after NY)
+
+  These windows cover roughly 8 out of 24 hours, so expected trade count
+  reduction is approximately 60-70% (most of the M15 bars are outside sessions).
+
+  Implementation: bars[-1].timestamp.hour checked against UTC hours.
+  Dukascopy data timestamps are UTC (utcfromtimestamp in merge_and_convert.py).
+
+  Primary success metric: strip-top-3 PF > 1.0
+  Secondary: false-breakout rate below 65%

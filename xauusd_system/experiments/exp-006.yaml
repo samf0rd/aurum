@@ -1,0 +1,29 @@
+---
+id: exp-006
+description: "M15 raw edge — EXP-002 config, research mode (risk gates disabled), 2020-2025"
+date: 2026-06-07
+profile: intraday
+from: 2020-01-01
+to: 2025-12-31
+research_mode: true
+strategy_overrides:
+  entry_confirmation_bars: 1
+  donchian_entry: 20
+  adx_threshold: 25
+notes: |
+  EXP-005 was terminated by the drawdown circuit breaker in week 3 of Jan 2020.
+  H1-calibrated risk limits (2% daily, 15% drawdown CB) fire immediately on M15's
+  higher signal frequency, making EXP-005 uninformative.
+
+  This experiment disables all hard risk gates (daily/weekly limits, drawdown CB,
+  consecutive-loss halt) to expose the raw M15 structural edge over 6 years.
+  The research_mode flag sets all thresholds to 99% — effectively unlimited.
+
+  Diagnostic questions:
+  1. What is the M15 structural identity? (regime breakdown — bull vs bear side)
+  2. Does confirmation=1 still help on M15?
+  3. What is the bars-in-trade profile? (M15 trades will be much shorter)
+  4. Is the strip-top-3 PF still marginal (0.88) or better?
+  5. Does the short side work on M15 (original diagnostic showed PF 1.21)?
+
+  This is the first honest look at the M15 edge. Do NOT use for risk calibration.

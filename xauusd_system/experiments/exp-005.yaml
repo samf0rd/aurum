@@ -1,0 +1,18 @@
+---
+id: exp-005
+description: "M15 baseline — EXP-002 confirmation=1 config ported to intended timeframe (2020-2025)"
+date: 2026-06-07
+profile: intraday
+from: 2020-01-01
+to: 2025-12-31
+strategy_overrides:
+  entry_confirmation_bars: 1
+  donchian_entry: 20
+  adx_threshold: 25
+notes: |
+  First M15 run. Direct port of EXP-002 (best H1 config — PF 1.17, 144 trades over 19 months).
+  Diagnostic question: does the H1 structural story hold on M15?
+  Original M15 diagnostic (EXP-001) showed shorts working (PF 1.21), longs broken (PF 0.31).
+  H1 showed the opposite: TRENDING_BULL PF 1.49, TRENDING_BEAR PF 0.53.
+  This experiment determines whether H1 findings transfer or the M15 identity is completely different.
+  Five diagnostic cuts required: regime, exit type, bars-in-trade, strip-top-3, entry timing.

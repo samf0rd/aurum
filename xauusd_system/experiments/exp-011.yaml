@@ -1,0 +1,23 @@
+---
+id: exp-011
+description: "M15 long-only, ADX>=30 — tighter trend filter to cut noise trades (research mode)"
+date: 2026-06-07
+profile: intraday
+from: 2020-01-01
+to: 2025-12-31
+research_mode: true
+strategy_overrides:
+  entry_confirmation_bars: 3
+  donchian_entry: 20
+  adx_threshold: 30
+  long_only: true
+notes: |
+  EXP-010 (long-only, conf=3, ADX>=25) achieved PF 1.08, +$33,658, Sharpe +0.28.
+  However, 69 trades fired in CHOPPY/HIGH_VOL/TRENDING_BEAR regimes — all losing,
+  costing meaningful P&L.
+
+  Hypothesis: raising ADX threshold to 30 filters weaker trends and cuts more of
+  the regime-boundary noise entries. Expected: fewer trades (~700-800), higher PF
+  (~1.12-1.20), better Calmar ratio.
+
+  This is the natural next refinement after establishing EXP-010 as the base config.

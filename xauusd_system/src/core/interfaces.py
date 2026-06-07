@@ -206,31 +206,18 @@ class IRiskEngine(ABC):
     """
     Validates orders before submission and manages account-level limits.
     All money management logic lives here — the signal generator never sizes.
+
+    approve_order() takes a fully-populated OrderRequest (from risk.models)
+    and returns an OrderDecision (approved + quantity + snapshot).
+    Import those types from risk.models at call sites to avoid a circular
+    import — IRiskEngine itself stays stdlib-only.
     """
 
     @abstractmethod
-    def approve_order(
-        self,
-        signal: Signal,
-        risk_state: RiskState,
-        current_spread: Decimal,
-        median_spread: Decimal,
-    ) -> tuple[bool, str]:
+    def approve_order(self, req) -> object:
         """
-        Returns (approved: bool, reason: str).
-        Checks: circuit breakers, daily/weekly limits, spread gate (Rule 10c),
-        vol regime (Rule 1c), position already open.
-        """
-
-    @abstractmethod
-    def compute_position_size(
-        self,
-        signal: Signal,
-        risk_state: RiskState,
-    ) -> Decimal:
-        """
-        Rule 6: qty = (equity × risk_pct) / (stop_distance × contract_value).
-        Halves risk_pct when gap_caution is True (Rule 10b).
+        Gate all risk controls. req is a risk.models.OrderRequest.
+        Returns a risk.models.OrderDecision (approved, quantity, snapshot).
         """
 
     @abstractmethod
@@ -241,7 +228,7 @@ class IRiskEngine(ABC):
         open_positions: list[Position],
         current_prices: dict[str, Decimal],
     ) -> RiskState:
-        """Recompute daily/weekly PnL, drawdown, and flip circuit breakers."""
+        """Return an updated RiskState snapshot after equity/P&L changes."""
 
     @abstractmethod
     def update_trailing_stop(
@@ -250,9 +237,13 @@ class IRiskEngine(ABC):
         bars: Sequence[Bar],
     ) -> Position:
         """
-        Move hard_stop up (for longs) to match Donchian-10 trailing level.
-        Stop never moves against the position.
+        Move hard_stop toward the favorable side to match Donchian-10 level.
+        The stop never moves against the position.
         """
+
+    @abstractmethod
+    def record_fill(self, fill) -> None:
+        """Notify the engine that a trade closed. fill must have realized_pnl."""
 
 
 class IOrderManager(ABC):

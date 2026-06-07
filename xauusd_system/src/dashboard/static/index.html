@@ -94,10 +94,50 @@
   .metric .val{font-size:22px;font-weight:600;font-family:var(--mono);letter-spacing:-.01em}
   .metric .sub{font-size:11px;color:var(--ink-faint)}
 
-  /* ============ TERMINAL GRID ============ */
-  .terminal{display:grid;grid-template-columns:248px 1fr 300px;gap:14px;align-items:start;padding-bottom:40px}
-  @media(max-width:1180px){.terminal{grid-template-columns:1fr;}}
+  /* ============ COCKPIT GRID (WP-7) ============ */
+  .cockpit{display:grid;grid-template-columns:240px 300px 1fr;gap:14px;align-items:start}
+  /* ≥760 < 1280: left+chart side-by-side, centre spans full width below */
+  @media(max-width:1279px){
+    .cockpit{grid-template-columns:240px 1fr}
+    .col-left{grid-column:1;grid-row:1}
+    .col-chart{grid-column:2;grid-row:1}
+    .col-mid{grid-column:1/-1;grid-row:2}
+  }
+  @media(max-width:759px){
+    .cockpit{grid-template-columns:1fr}
+    .col-left,.col-mid,.col-chart{grid-column:1!important;grid-row:auto!important}
+  }
   .col{display:flex;flex-direction:column;gap:14px}
+  /* ── WP-7 Status bar ── */
+  .statusbar{display:flex;align-items:stretch;background:var(--bg-card);border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden;margin:10px 0 28px;font-family:var(--mono)}
+  .sb-item{display:flex;align-items:center;gap:5px;padding:7px 14px;border-right:1px solid var(--line);white-space:nowrap;flex-shrink:0}
+  .sb-item:last-child{border-right:none;flex:1}
+  .sb-lbl{font-size:8px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);margin-right:2px}
+  .sb-val{font-size:11.5px;font-weight:600;color:var(--ink)}
+  .sb-val.live{color:var(--green)} .sb-val.replay{color:var(--gold)}
+  /* ── below-fold explanatory section ── */
+  .below-fold{padding-bottom:60px}
+  /* ── WP-8 ── */
+  #regime-strip{height:18px;flex-shrink:0;overflow:hidden;border-top:1px solid var(--line-soft)}
+
+  /* ── WP-9 Scrubber ── */
+  #scrubber{border-top:1px solid var(--line);padding:10px 14px 12px;flex-shrink:0}
+  .scrub-row{display:flex;align-items:center;gap:7px;margin-bottom:8px;flex-wrap:wrap}
+  .scrub-select{flex:1;min-width:0;background:var(--bg-elev);border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:var(--mono);font-size:11px;padding:5px 8px;cursor:pointer;outline:none}
+  .scrub-select:disabled{opacity:.4;cursor:default}
+  .scrub-btn{background:var(--bg-elev);border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:12px;width:30px;height:28px;cursor:pointer;display:grid;place-items:center;flex-shrink:0;transition:.15s}
+  .scrub-btn:hover:not(:disabled){background:var(--bg-card-hover)}
+  .scrub-btn:disabled{opacity:.4;cursor:default}
+  .scrub-ts{font-family:var(--mono);font-size:10.5px;color:var(--ink-dim);white-space:nowrap;flex-shrink:0}
+  .scrub-rbadge{font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:2px 7px;border-radius:4px;flex-shrink:0}
+  .scrub-rbadge.bull{background:var(--green-soft);color:var(--green)}
+  .scrub-rbadge.bear{background:var(--red-soft);color:var(--red)}
+  .scrub-rbadge.neutral{background:rgba(154,163,176,.1);color:var(--ink-faint)}
+  .scrub-range{width:100%;height:4px;-webkit-appearance:none;appearance:none;background:rgba(255,255,255,.07);border-radius:2px;cursor:pointer;outline:none;display:block}
+  .scrub-range::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--gold);border:2px solid var(--bg-card);cursor:pointer;box-shadow:0 0 4px rgba(245,177,51,.4)}
+  .scrub-range::-moz-range-thumb{width:12px;height:12px;border-radius:50%;border:2px solid var(--bg-card);background:var(--gold);cursor:pointer}
+  .scrub-range:disabled{opacity:.4;cursor:default}
+  .scrub-foot{display:flex;justify-content:space-between;margin-top:3px;font-size:9px;font-family:var(--mono);color:var(--ink-faint)}
   .card{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--radius)}
   .card-pad{padding:16px}
   .card-h{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);padding:13px 16px 0}
@@ -175,11 +215,6 @@
   .side.long{background:var(--green-soft);color:var(--green)} .side.short{background:var(--red-soft);color:var(--red)}
   .trades-empty{padding:24px 16px;text-align:center;color:var(--ink-faint);font-size:12.5px}
 
-  /* ============ STRATEGY VIEW ============ */
-  .strat{display:none;padding-bottom:60px}
-  .strat.show{display:block}
-  .terminal.hide{display:none}
-
   /* hero story */
   .story{margin:20px 0 26px;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:linear-gradient(180deg,var(--bg-elev),var(--bg-card))}
   .story-top{padding:26px 28px 22px;border-bottom:1px solid var(--line-soft)}
@@ -232,13 +267,81 @@
   .stack span{font-family:var(--mono);font-size:11px;color:var(--ink-dim);border:1px solid var(--line);padding:4px 9px;border-radius:6px}
 
   .foot{padding:28px 0 50px;color:var(--ink-faint);font-size:11.5px;border-top:1px solid var(--line);margin-top:30px;line-height:1.7}
+
+  /* ── WP-5  Risk Circuit Breakers ── */
+  .cb-section{padding:12px 16px 15px;display:flex;flex-direction:column;gap:13px}
+  .cb-gauge{}
+  .cb-hdr{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+  .cb-lbl{font-size:10.5px;color:var(--ink-dim);font-weight:500;letter-spacing:.02em}
+  .cb-meta{display:flex;align-items:baseline;gap:6px}
+  .cb-dlr{font-size:11px;font-family:var(--mono);color:var(--ink);transition:color .3s}
+  .cb-pct{font-size:10px;font-family:var(--mono);color:var(--ink-faint)}
+  .cb-track{position:relative;height:6px;background:rgba(255,255,255,.07);border-radius:3px;margin:0 0 4px;overflow:visible;transition:border .3s}
+  .cb-fill{position:absolute;left:0;top:0;height:100%;border-radius:3px;transition:width .5s ease,background-color .3s;background:var(--green)}
+  .cb-fill.cb-amber{background:var(--gold)}
+  .cb-fill.cb-red{background:var(--red)}
+  .cb-mark{position:absolute;right:-1px;top:-3px;width:2px;height:12px;background:var(--red);border-radius:1px;opacity:.55}
+  .cb-st{font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);transition:color .3s}
+  .cb-st.tripped{color:var(--red);animation:cb-blink 1.2s ease-in-out infinite}
+  @keyframes cb-blink{0%,100%{opacity:1}50%{opacity:.4}}
+  .cbg-tripped .cb-dlr{color:var(--red)}
+  .cbg-tripped .cb-track{border:1px solid rgba(255,84,104,.28)}
+
+  /* ── WP-4  Replay mode ── */
+  .replay-banner{
+    display:none;position:sticky;top:58px;z-index:40;
+    background:rgba(245,177,51,.12);border-bottom:1px solid rgba(245,177,51,.35);
+    padding:8px 22px;font-size:11.5px;font-weight:600;letter-spacing:.04em;
+    color:var(--gold);align-items:center;gap:8px
+  }
+  .replay-banner .rb-dot{width:7px;height:7px;border-radius:50%;background:var(--gold);flex-shrink:0}
+  .replay-banner .rb-badge{
+    font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+    background:rgba(245,177,51,.18);border:1px solid rgba(245,177,51,.4);
+    color:var(--gold);padding:2px 7px;border-radius:4px;flex-shrink:0
+  }
+  .replay-mode .metrics .metric{opacity:.55;transition:opacity .3s}
+  .replay-mode .metrics .metric:hover{opacity:.75}
+  /* trade-row stagger animation */
+  @keyframes row-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+  .trade-row.animate{animation:row-in .28s ease both}
+
+  /* ── WP-6  Capacity block ── */
+  .cap-section{padding:12px 16px 14px;display:flex;flex-direction:column}
+  .cap-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid var(--line-soft)}
+  .cap-row:first-child{border-top:none}
+  .cap-k{font-size:11px;color:var(--ink-dim)}
+  .cap-v{font-size:13px;font-weight:600;font-family:var(--mono)}
+  .cap-sep{height:1px;background:var(--line);margin:6px 0 2px}
+  .cap-pill{margin-top:10px;padding:8px 11px;border-radius:var(--radius-sm);font-size:11px;font-weight:600;letter-spacing:.04em;text-align:center;transition:background .3s,color .3s}
+  .cap-armed {background:var(--green-soft);color:var(--green);border:1px solid rgba(38,208,124,.25)}
+  .cap-halted{background:var(--red-soft);color:var(--red);border:1px solid rgba(255,84,104,.3);animation:cb-blink 1.2s ease-in-out infinite}
+  .cap-inpos {background:rgba(59,157,255,.08);color:var(--blue);border:1px solid rgba(59,157,255,.25)}
+  .cap-replay{background:rgba(245,177,51,.07);color:var(--gold);border:1px solid rgba(245,177,51,.2)}
+
+  /* ── Phase 7: Strategy tab / Validation report ── */
+  .val-badge{display:inline-flex;align-items:center;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+  .val-ok   {background:var(--green-soft);color:var(--green);border:1px solid rgba(38,208,124,.3)}
+  .val-fail {background:var(--red-soft);color:var(--red);border:1px solid rgba(255,84,104,.3)}
+  .val-none {background:rgba(154,163,176,.08);color:var(--ink-faint);border:1px solid var(--line)}
+  .val-header{display:flex;align-items:center;gap:18px;margin:32px 0 24px}
+  .val-gate{display:grid;grid-template-columns:30px 1fr auto;gap:14px;align-items:center;background:var(--bg-card);border:1px solid var(--line);border-radius:var(--radius-sm);padding:16px;margin-bottom:10px}
+  .gate-ic{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;flex-shrink:0}
+  .gate-ok .gate-ic{background:var(--green-soft);color:var(--green)}
+  .gate-fail .gate-ic{background:var(--red-soft);color:var(--red)}
+  .gate-lbl{font-size:13px;font-weight:600;margin-bottom:4px}
+  .gate-detail{font-size:11.5px;font-family:var(--mono);color:var(--ink-faint);line-height:1.55}
+  .gate-pill{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:4px 10px;border-radius:5px;white-space:nowrap}
+  .pill-ok  {background:var(--green-soft);color:var(--green);border:1px solid rgba(38,208,124,.25)}
+  .pill-fail{background:var(--red-soft);color:var(--red);border:1px solid rgba(255,84,104,.25)}
+  #view-strategy{padding-bottom:60px}
 </style>
 </head>
 <body>
 
 <header>
   <div class="wrap hdr">
-    <div class="brand">Aurum <span class="pill">Paper</span> <span class="pill" id="hprofile">Swing (H1)</span></div>
+    <div class="brand">Aurum <span class="pill">Paper</span> <span class="pill" id="hprofile">Intraday (M15)</span></div>
     <div class="hdr-price">
       <span class="px mono" id="hpx">—</span>
       <span class="chg mono" id="hchg"></span>
@@ -246,7 +349,7 @@
     <div class="hdr-spacer"></div>
     <div class="regime neutral" id="regime">◆ NEUTRAL</div>
     <div class="hdr-meta">ADX <b id="hadx">—</b></div>
-    <div class="hdr-meta">H1 · <b id="hclock">—</b></div>
+    <div class="hdr-meta">M15 · <b id="hclock">—</b></div>
     <div class="telem-cluster">
       <div class="telem-item">
         <span class="telem-lbl">SPREAD <span class="telem-modeled">modeled</span></span>
@@ -261,30 +364,39 @@
         <span class="telem-val tel-dim" id="tel-age-val">—</span>
       </div>
     </div>
-    <div class="live"><span class="dot"></span> LIVE</div>
-    <div class="seg">
-      <button id="tabT" class="active" onclick="setView('terminal')">Terminal</button>
-      <button id="tabS" onclick="setView('strategy')">Strategy</button>
+    <div class="live" id="live-indicator"><span class="dot"></span> LIVE</div>
+    <!-- Phase 7: LIVE / REPLAY / STRATEGY tabs -->
+    <div class="seg" id="mode-seg">
+      <button id="tabLive"     class="active" onclick="setTab('live')">LIVE</button>
+      <button id="tabReplay"               onclick="setTab('replay')">REPLAY</button>
+      <button id="tabStrategy"             onclick="setTab('strategy')">STRATEGY</button>
     </div>
   </div>
 </header>
 
+<!-- WP-4: persistent replay banner (hidden until REPLAY mode is active) -->
+<div class="replay-banner" id="replay-banner">
+  <span class="rb-dot"></span>
+  <span class="rb-badge">REPLAY</span>
+  historical backtest fills &nbsp;·&nbsp; not live executions
+</div>
+
 <main class="wrap">
 
-  <!-- METRICS -->
-  <div class="metrics">
-    <div class="metric"><span class="lbl">Total P&amp;L</span><span class="val pos">+$0.00</span><span class="sub">paper account</span></div>
-    <div class="metric"><span class="lbl">Win Rate</span><span class="val">—</span><span class="sub">no closed trades</span></div>
-    <div class="metric"><span class="lbl">Sharpe</span><span class="val">0.00</span><span class="sub">annualized</span></div>
-    <div class="metric"><span class="lbl">Max Drawdown</span><span class="val neg">—</span><span class="sub">from peak equity</span></div>
-    <div class="metric"><span class="lbl">Trades</span><span class="val">0</span><span class="sub">since inception</span></div>
+  <!-- METRICS (Phase 7: PF + Expectancy primary; Sharpe removed as primary) -->
+  <div class="metrics" id="metrics-strip">
+    <div class="metric"><span class="lbl">Profit Factor</span><span class="val" id="met-pf">—</span><span class="sub" id="met-pf-sub">no closed trades</span></div>
+    <div class="metric"><span class="lbl">Expectancy / Trade</span><span class="val" id="met-exp">—</span><span class="sub" id="met-exp-sub">no closed trades</span></div>
+    <div class="metric"><span class="lbl">Win Rate</span><span class="val" id="met-wr">—</span><span class="sub" id="met-wr-sub">no closed trades</span></div>
+    <div class="metric"><span class="lbl">Max Drawdown</span><span class="val neg" id="met-dd">—</span><span class="sub" id="met-dd-sub">from peak equity</span></div>
+    <div class="metric"><span class="lbl">Trades</span><span class="val" id="met-trades">0</span><span class="sub" id="met-trades-sub">since inception</span></div>
   </div>
 
-  <!-- ===== TERMINAL VIEW ===== -->
-  <section class="terminal" id="view-terminal">
+  <!-- ===== COCKPIT — three-column grid (WP-7) ===== -->
+  <section class="cockpit" id="view-terminal">
 
-    <!-- LEFT -->
-    <div class="col">
+    <!-- LEFT: indicators · circuit breakers · capacity -->
+    <div class="col col-left">
       <div class="card">
         <div class="bigpx">
           <div class="n mono" id="bpx">—</div>
@@ -298,79 +410,92 @@
         </div>
       </div>
 
+      <!-- WP-5 Risk Circuit Breakers -->
       <div class="card">
-        <div class="card-h">Predictive Telemetry</div>
-        <div class="telem">
-          <div class="row"><span class="k">Distance to long trigger</span><span class="v gold" id="t-dist">—</span></div>
-          <div class="row"><span class="k">Next H1 close</span><span class="v" id="t-clock">—</span></div>
-          <div class="trig wait" id="t-state">WAITING FOR BREAKOUT</div>
-        </div>
-      </div>
+        <div class="card-h">Risk Circuit Breakers</div>
+        <div class="cb-section">
 
-      <!-- WHAT'S HAPPENING — plain-english narration tied to the live tree -->
-      <div class="card">
-        <div class="card-h">What the bot is doing</div>
-        <div class="telem" style="padding-top:10px">
-          <p style="font-size:12.5px;color:var(--ink-dim);line-height:1.6" id="narration">
-            Connecting to live feed…
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <!-- CENTER -->
-    <div class="col">
-      <div class="card chart-card">
-        <div class="chart-head">
-          <div class="chart-title">XAU/USD · H1 <span>Donchian Breakout</span></div>
-          <div class="legend">
-            <span><i style="background:var(--gold)"></i>SMA 200</span>
-            <span><i style="background:var(--blue)"></i>Donchian 20</span>
-            <span><i style="background:var(--ink-faint)"></i>Trailing stop</span>
+          <div class="cb-gauge" id="cbg-daily">
+            <div class="cb-hdr">
+              <span class="cb-lbl">Daily P&amp;L</span>
+              <div class="cb-meta">
+                <span class="cb-dlr" id="cb-daily-dlr">$0 / $—</span>
+                <span class="cb-pct" id="cb-daily-pct">0%</span>
+              </div>
+            </div>
+            <div class="cb-track">
+              <div class="cb-fill" id="cb-daily-fill" style="width:0%"></div>
+              <div class="cb-mark"></div>
+            </div>
+            <span class="cb-st" id="cb-daily-st">circuit armed</span>
           </div>
+
+          <div class="cb-gauge" id="cbg-weekly">
+            <div class="cb-hdr">
+              <span class="cb-lbl">Weekly P&amp;L</span>
+              <div class="cb-meta">
+                <span class="cb-dlr" id="cb-weekly-dlr">$0 / $—</span>
+                <span class="cb-pct" id="cb-weekly-pct">0%</span>
+              </div>
+            </div>
+            <div class="cb-track">
+              <div class="cb-fill" id="cb-weekly-fill" style="width:0%"></div>
+              <div class="cb-mark"></div>
+            </div>
+            <span class="cb-st" id="cb-weekly-st">circuit armed</span>
+          </div>
+
+          <div class="cb-gauge" id="cbg-dd">
+            <div class="cb-hdr">
+              <span class="cb-lbl">Drawdown from Peak</span>
+              <div class="cb-meta">
+                <span class="cb-dlr" id="cb-dd-dlr">$0 / $—</span>
+                <span class="cb-pct" id="cb-dd-pct">0%</span>
+              </div>
+            </div>
+            <div class="cb-track">
+              <div class="cb-fill" id="cb-dd-fill" style="width:0%"></div>
+              <div class="cb-mark"></div>
+            </div>
+            <span class="cb-st" id="cb-dd-st">circuit armed</span>
+          </div>
+
         </div>
-        <div id="chart"></div>
-        <div class="equity-strip">
-          <div class="lbl"><span>Equity Curve · since inception</span><span class="mono" id="eq-now">—</span></div>
-          <div id="equity"></div>
-        </div>
+      </div>
+
+      <!-- WP-6 Capacity -->
+      <div class="card">
+        <div class="card-h">Capacity</div>
+        <div id="posbox"></div>
       </div>
     </div>
 
-    <!-- RIGHT -->
-    <div class="col">
-      <!-- LIVE DECISION TREE — now lives with the terminal -->
+    <!-- CENTRE: decision tree · trade history -->
+    <div class="col col-mid">
       <div class="card">
         <div class="card-h">Live Decision Tree</div>
         <div class="dtree">
 
-          <!-- Rule 1a — Regime filter -->
           <div class="rule" id="r1a-row" onclick="dtToggle('r1a')">
             <div class="ic ok" id="r1a-ic">✓</div>
             <div class="body">
               <div class="t">Rule 1a — Regime filter</div>
               <div class="d" id="r1a-d">Close &gt; SMA200 → <b class="pos">BULL</b></div>
-              <div class="rule-detail" id="r1a-det">
-                <div class="rml" id="r1a-ml"></div>
-              </div>
+              <div class="rule-detail" id="r1a-det"><div class="rml" id="r1a-ml"></div></div>
             </div>
             <div class="rule-chev">›</div>
           </div>
 
-          <!-- Rule 1b — Trend filter -->
           <div class="rule" id="r1b-row" onclick="dtToggle('r1b')">
             <div class="ic ok" id="r1b-ic">✓</div>
             <div class="body">
               <div class="t">Rule 1b — Trend filter</div>
-              <div class="d" id="r1b-d">ADX ≥ 20 → <b class="pos">TRENDING</b></div>
-              <div class="rule-detail" id="r1b-det">
-                <div class="rml" id="r1b-ml"></div>
-              </div>
+              <div class="d" id="r1b-d">ADX ≥ 25 → <b class="pos">TRENDING</b></div>
+              <div class="rule-detail" id="r1b-det"><div class="rml" id="r1b-ml"></div></div>
             </div>
             <div class="rule-chev">›</div>
           </div>
 
-          <!-- Rule 1c — Volatility cap -->
           <div class="rule" id="r1c-row" onclick="dtToggle('r1c')">
             <div class="ic ok" id="r1c-ic">✓</div>
             <div class="body">
@@ -387,7 +512,6 @@
             <div class="rule-chev">›</div>
           </div>
 
-          <!-- Rule 2 — Entry trigger -->
           <div class="rule" id="r2-row" onclick="dtToggle('r2')">
             <div class="ic no" id="r2ic">✕</div>
             <div class="body">
@@ -405,15 +529,12 @@
             <div class="rule-chev">›</div>
           </div>
 
-          <!-- Exit monitor (Rule 3) -->
           <div class="rule" id="r3-row" onclick="dtToggle('r3')">
             <div class="ic pend" id="r3-ic">·</div>
             <div class="body">
               <div class="t">Exit monitor</div>
               <div class="d" id="r3-d">D10 low on deck: —</div>
-              <div class="rule-detail" id="r3-det">
-                <div class="rml" id="r3-ml"></div>
-              </div>
+              <div class="rule-detail" id="r3-det"><div class="rml" id="r3-ml"></div></div>
             </div>
             <div class="rule-chev">›</div>
           </div>
@@ -423,20 +544,95 @@
       </div>
 
       <div class="card">
-        <div class="card-h">Open Position</div>
-        <div id="posbox"><div class="pos-empty">— No open position —</div></div>
-      </div>
-
-      <div class="card">
         <div class="card-h row"><span>Trade History</span><span class="faint">0 shown</span></div>
         <div class="trades"><div class="trades-empty">No closed trades yet</div></div>
       </div>
     </div>
+
+    <!-- RIGHT: M15 chart -->
+    <div class="col col-chart">
+      <div class="card chart-card">
+        <div class="chart-head">
+          <div class="chart-title">XAU/USD · M15 <span>Donchian Breakout</span></div>
+          <div class="legend">
+            <span><i style="background:var(--gold)"></i>SMA 200</span>
+            <span><i style="background:var(--blue)"></i>Donchian 20</span>
+            <span><i style="background:var(--ink-faint)"></i>Trailing stop</span>
+          </div>
+        </div>
+        <div id="chart"></div>
+        <!-- WP-8 regime strip — thin colored bar shading BULL/BEAR/CHOPPY -->
+        <div id="regime-strip"></div>
+        <div class="equity-strip">
+          <div class="lbl"><span>Equity Curve · since inception</span><span class="mono" style="font-size:11px">Current: <span id="eq-now">—</span> · Peak: <span id="eq-peak">—</span></span></div>
+          <div id="equity"></div>
+        </div>
+        <!-- WP-9 scrubber — visible in REPLAY mode only -->
+        <div id="scrubber" style="display:none">
+          <div class="scrub-row">
+            <select id="scrub-select" class="scrub-select" disabled>
+              <option value="-1">Select trade to scrub…</option>
+            </select>
+            <button id="scrub-play" class="scrub-btn" disabled title="Play / Pause">▶</button>
+            <span class="scrub-ts" id="scrub-ts">—</span>
+            <span class="scrub-rbadge neutral" id="scrub-rbadge"></span>
+          </div>
+          <input type="range" id="scrub-range" class="scrub-range" min="0" max="0" value="0" disabled>
+          <div class="scrub-foot"><span id="scrub-t0">—</span><span id="scrub-t1">—</span></div>
+        </div>
+      </div>
+    </div>
+
   </section>
 
-  <!-- ===== STRATEGY VIEW ===== -->
-  <section class="strat" id="view-strategy">
+  <!-- STATUS BAR (WP-7) -->
+  <div class="statusbar" id="statusbar">
+    <div class="sb-item"><span class="sb-lbl">MODE</span><span class="sb-val live" id="sb-mode">LIVE · PAPER</span></div>
+    <div class="sb-item"><span class="sb-lbl">FEED</span><span class="sb-val" id="sb-feed">Twelve Data</span></div>
+    <div class="sb-item"><span class="sb-lbl">LAST TICK</span><span class="sb-val" id="sb-tick">—</span></div>
+    <div class="sb-item"><span class="sb-lbl">SESSION</span><span class="sb-val" id="sb-session">—</span></div>
+    <div class="sb-item"><span class="sb-lbl">M15 CLOSE</span><span class="sb-val mono" id="sb-m15">—</span></div>
+  </div>
 
+  <!-- DOM anchors for JS writes from removed cards; kept invisible so existing code works -->
+  <div style="display:none" aria-hidden="true">
+    <span id="t-dist"></span><span id="t-clock"></span>
+    <div id="t-state"></div><span id="narration"></span>
+  </div>
+
+  <!-- ===== STRATEGY TAB — validation report, hidden until user clicks STRATEGY ===== -->
+  <section id="view-strategy" style="display:none">
+    <div id="val-loading" style="padding:60px 0;text-align:center;color:var(--ink-faint)">Loading validation report…</div>
+    <div id="val-content" style="display:none">
+
+      <!-- Header: badge + title + meta -->
+      <div class="val-header">
+        <div class="val-badge val-none" id="val-badge">—</div>
+        <div>
+          <div style="font-size:18px;font-weight:600" id="val-title">Strategy Validation</div>
+          <div style="font-size:12px;color:var(--ink-faint);margin-top:5px;font-family:var(--mono)" id="val-meta">
+            Run: python -m backtest.validate --profile swing --start 2020-01-01 --end 2026-01-01
+          </div>
+        </div>
+      </div>
+
+      <!-- In-sample statistics -->
+      <div class="sec-h">In-Sample Statistics</div>
+      <div class="metrics" id="val-metrics-strip" style="margin-bottom:28px"></div>
+
+      <!-- Gate results -->
+      <div class="sec-h">Validation Gates</div>
+      <div id="val-gates"></div>
+
+      <div class="foot" style="margin-top:24px">
+        All numbers produced by <code>backtest/engine.py</code> running over real historical bars.
+        In-sample statistics are illustrative; OOS walk-forward results are the primary gate.
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== BELOW FOLD — parameter reference, always visible below the cockpit ===== -->
+  <section class="below-fold" style="display:none" id="view-reference">
     <!-- STORYTELLING HERO -->
     <div class="story">
       <div class="story-top">
@@ -460,7 +656,7 @@
           <div class="num">02</div>
           <div class="ic" style="background:var(--green-soft)">🎯</div>
           <div class="st">Wait for the break</div>
-          <div class="sd">It watches the highest price of the last 20 hours. The instant price closes above that ceiling, that's the buy signal.</div>
+          <div class="sd">It watches the highest price of the last 5 hours (20 × 15-min bars). The instant price closes above that ceiling, that's the buy signal.</div>
           <div class="arr">→</div>
         </div>
         <div class="step">
@@ -485,8 +681,8 @@
       <div class="rcard">
         <span class="tag filter">Filter</span>
         <h3>Only trade in a trend</h3>
-        <p>Gold has to be above its 200-hour average (an uptrend) and the trend strength gauge (ADX) has to read above 20. If not, the bot does nothing.</p>
-        <div class="tech">Close &gt; SMA(200) &amp;&amp; ADX(14) ≥ 20</div>
+        <p>Gold has to be above its 200-bar (50-hour) moving average and the trend strength gauge (ADX) has to read above 25. If not, the bot does nothing.</p>
+        <div class="tech">Close &gt; SMA(200) &amp;&amp; ADX(14) ≥ 25</div>
       </div>
       <div class="rcard">
         <span class="tag filter">Filter</span>
@@ -497,7 +693,7 @@
       <div class="rcard">
         <span class="tag entry">Entry</span>
         <h3>Buy the breakout</h3>
-        <p>When price closes above the highest point of the last 20 hours, the trend just made a new high — the bot buys and joins the move.</p>
+        <p>When price closes above the highest point of the last 5 hours, the trend just made a new high — the bot buys and joins the move.</p>
         <div class="tech">close &gt; Donchian(20) high → ENTER LONG</div>
       </div>
       <div class="rcard">
@@ -515,7 +711,7 @@
       <div class="rcard">
         <span class="tag exit">Exit</span>
         <h3>Let winners run</h3>
-        <p>As the trade profits, a trailing stop follows price up. When price closes back below the 10-hour low, the bot banks the gain and exits.</p>
+        <p>As the trade profits, a trailing stop follows price up. When price closes back below the 2.5-hour low (Donchian 10-bar), the bot banks the gain and exits.</p>
         <div class="tech">exit when close &lt; Donchian(10) low</div>
       </div>
     </div>
@@ -532,7 +728,7 @@
       <div class="anode" style="border-top-color:var(--purple)">
         <div style="color:var(--purple);font-size:18px">◉</div>
         <div class="t">Strategy / Regime</div>
-        <div class="d">Runs the SMA/ADX filter and the Donchian breakout logic each H1 close.</div>
+        <div class="d">Runs the SMA/ADX filter and the Donchian breakout logic each M15 close.</div>
         <div class="f">strategy/signal_generator.py</div>
       </div>
       <div class="anode" style="border-top-color:var(--gold)">
@@ -559,9 +755,12 @@
       <thead><tr><th>Module</th><th>Parameter</th><th>Value</th><th>Description</th></tr></thead>
       <tbody>
         <tr><td class="mod">Regime</td><td>SMA lookback</td><td class="val">200 bars</td><td>close above/below SMA(200) → BULL / BEAR</td></tr>
-        <tr><td class="mod">Regime</td><td>ADX threshold</td><td class="val">≥ 20</td><td>below = choppy, entries blocked</td></tr>
+        <tr><td class="mod">Regime</td><td>ADX threshold</td><td class="val">≥ 25</td><td>below = choppy, entries blocked (EXP-020)</td></tr>
+        <tr><td class="mod">Regime</td><td>H1 trend gate</td><td class="val">Enabled</td><td>price must be above H1 SMA(200) — ~200 hours lookback</td></tr>
         <tr><td class="mod">Vol filter</td><td>ATR ratio cap</td><td class="val">&lt; 2.0×</td><td>vol_ratio = ATR / 100-bar median ATR</td></tr>
-        <tr><td class="mod">Entry</td><td>Donchian breakout</td><td class="val">20 bars</td><td>close &gt; D20H (long) or close &lt; D20L (short)</td></tr>
+        <tr><td class="mod">Entry</td><td>Donchian breakout</td><td class="val">20 bars</td><td>close &gt; D20H (long only)</td></tr>
+        <tr><td class="mod">Entry</td><td>Confirmation bars</td><td class="val">3 bars</td><td>price must hold above breakout for 3 bars before entry</td></tr>
+        <tr><td class="mod">Entry</td><td>Direction</td><td class="val">Long only</td><td>no short entries — system targets gold bull regimes</td></tr>
         <tr><td class="mod">Exit</td><td>Donchian trail</td><td class="val">10 bars</td><td>close crosses D10 in adverse direction</td></tr>
         <tr><td class="mod">Exit</td><td>Regime flip</td><td class="val">SMA(200)</td><td>close crosses SMA(200), exits matching position</td></tr>
         <tr><td class="mod">Risk</td><td>Position risk</td><td class="val">1% equity</td><td>qty = equity × 0.01 / (ATR × 2 × 100)</td></tr>
@@ -574,11 +773,11 @@
 
     <!-- PROFILE CAVEAT -->
     <div style="margin:28px 0 0;padding:18px 20px;background:var(--bg-card);border:1px solid var(--line);border-radius:12px;font-size:13px;color:var(--ink-dim);line-height:1.7" id="profile-caveat">
-      <b class="gold" id="caveat-profile-name">Swing (H1)</b> is the backtested, validation-gated strategy
-      (walk-forward + Monte Carlo + cost-stress). <b id="caveat-profile-alt">Intraday (M15)</b> runs the
-      identical rule structure on a faster timeframe for higher activity; it inherits the proven logic
-      but must clear the same validation gates before being treated as proven.
-      Until then it is a forward-test in progress.
+      <b class="gold" id="caveat-profile-name">Intraday (M15)</b> is the active forward-test profile:
+      same Donchian-breakout rule structure as the validated benchmark, running on a 15-min clock
+      for higher trade frequency. Walk-forward validation is pending.
+      <b id="caveat-profile-alt">Swing (H1)</b> is the backtested, validation-gated benchmark
+      (walk-forward + Monte Carlo + cost-stress). Parameters are identical across both profiles.
     </div>
 
     <div class="foot">
@@ -590,16 +789,64 @@
 
 <script>
 /* ============================================================
-   VIEW TOGGLE
+   VIEW TOGGLE — Phase 7: three-tab navigation
+   setTab() is the public API for all three tabs.
+   setReplayMode() handles the LIVE/REPLAY data-switching and is
+   called internally; it still owns viewMode and the scrubber state.
    ============================================================ */
-function setView(v){
-  const t = document.getElementById('view-terminal');
-  const s = document.getElementById('view-strategy');
-  document.getElementById('tabT').classList.toggle('active', v==='terminal');
-  document.getElementById('tabS').classList.toggle('active', v==='strategy');
-  if(v==='terminal'){ t.classList.remove('hide'); s.classList.remove('show'); setTimeout(fit,30); }
-  else { t.classList.add('hide'); s.classList.add('show'); }
+let viewTab = 'live';  // 'live' | 'replay' | 'strategy'
+
+function setTab(tab) {
+  viewTab = tab;
+  const isReplay   = tab === 'replay';
+  const isStrategy = tab === 'strategy';
+
+  document.getElementById('tabLive').classList.toggle('active',     tab === 'live');
+  document.getElementById('tabReplay').classList.toggle('active',   isReplay);
+  document.getElementById('tabStrategy').classList.toggle('active', isStrategy);
+
+  const termEl  = document.getElementById('view-terminal');
+  const stratEl = document.getElementById('view-strategy');
+  const sbEl    = document.getElementById('statusbar');
+  if (termEl)  termEl.style.display  = isStrategy ? 'none' : '';
+  if (stratEl) stratEl.style.display = isStrategy ? ''     : 'none';
+  if (sbEl)    sbEl.style.display    = isStrategy ? 'none' : '';
+
+  if (isStrategy) {
+    scrubPause();
+    _scrubTrade = null;
+    loadValidationReport();
+  } else {
+    setReplayMode(isReplay);
+  }
+  setTimeout(fit, 30);
 }
+
+function setView(v){ setTimeout(fit, 30); }  // legacy noop
+
+/* ============================================================
+   WP-7  STATUS BAR
+   ============================================================ */
+function _fxSession() {
+  const h = new Date().getUTCHours();
+  if (h >= 7  && h < 12) return 'London';
+  if (h >= 12 && h < 16) return 'London / NY';
+  if (h >= 16 && h < 21) return 'New York';
+  if (h >= 21 || h < 2)  return 'Sydney';
+  return 'Tokyo';
+}
+function _sbSetMode(isReplay) {
+  const el = document.getElementById('sb-mode');
+  if (!el) return;
+  el.textContent = isReplay ? 'REPLAY · PAPER' : 'LIVE · PAPER';
+  el.className   = 'sb-val ' + (isReplay ? 'replay' : 'live');
+}
+// Refresh session label every 60 s; paint once immediately
+(function _initSb(){
+  const el = document.getElementById('sb-session');
+  if (el) el.textContent = _fxSession();
+  setInterval(() => { if (el) el.textContent = _fxSession(); }, 60000);
+})();
 
 /* ============================================================
    CHART  (Lightweight Charts v5 — uses addSeries, not v4 addCandlestickSeries)
@@ -655,11 +902,31 @@ const eqLine = eqChart.addSeries(LWC.AreaSeries, {
   lineWidth:2, priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false,
 });
 
+/* ── WP-8 Regime strip chart ─────────────────────────────────────────────── */
+const regimeEl = document.getElementById('regime-strip');
+const regimeChart = LWC.createChart(regimeEl, {
+  layout:{ background:{type:'solid',color:'transparent'}, textColor:'transparent', fontSize:1 },
+  grid:{ vertLines:{visible:false}, horzLines:{visible:false} },
+  rightPriceScale:{ visible:false }, leftPriceScale:{ visible:false },
+  timeScale:{ visible:false }, crosshair:{mode:0},
+  handleScroll:false, handleScale:false,
+});
+const regimeSeries = regimeChart.addSeries(LWC.HistogramSeries, {
+  color:'rgba(154,163,176,0.10)',
+  priceFormat:{type:'price'},
+  lastValueVisible:false, priceLineVisible:false, base:0,
+});
+// Keep regime strip locked to the main chart's visible time range
+chart.timeScale().subscribeVisibleLogicalRangeChange(range => {
+  if (range) regimeChart.timeScale().setVisibleLogicalRange(range);
+});
+
 /* responsive sizing */
 function fit(){
   chart.applyOptions({ width: chartEl.clientWidth, height: chartEl.clientHeight });
   const eqEl=document.getElementById('equity');
   eqChart.applyOptions({ width: eqEl.clientWidth, height: eqEl.clientHeight });
+  if (regimeEl) regimeChart.applyOptions({ width: regimeEl.clientWidth, height: regimeEl.clientHeight });
 }
 const ro = new ResizeObserver(fit);
 ro.observe(chartEl);
@@ -683,13 +950,17 @@ let CONFIG = {
     bar_seconds:    900,
     sma_period:     200,
     adx_period:     14,
-    adx_threshold:  20.0,
-    donchian_entry: 20,
-    donchian_exit:  10,
-    atr_period:     14,
-    atr_stop_mult:  2.0,
-    vol_ratio_cap:  2.0,
-    risk_per_trade: 0.01,
+    adx_threshold:           25.0,
+    donchian_entry:          20,
+    donchian_exit:           10,
+    atr_period:              14,
+    atr_stop_mult:           2.0,
+    vol_ratio_cap:           2.0,
+    risk_per_trade:          0.01,
+    entry_confirmation_bars: 3,
+    long_only:               true,
+    h1_trend_gate:           true,
+    session_filter:          false,
   },
   risk: {
     risk_pct_normal:        0.01,
@@ -770,6 +1041,553 @@ function activeState() {
 }
 
 /* ============================================================
+   WP-8  CHART OVERLAYS
+   Three features driven from a single updateChartMarkers() call
+   and a per-tick updatePositionLines() call.  Both work in LIVE
+   and REPLAY modes; the chart always streams live price.
+   ============================================================ */
+
+// ── Regime strip ────────────────────────────────────────────────────────────
+// Computes ADX(14) once per bar load so all three states render correctly.
+// Live ticks use the engine's authoritative d.regime value.
+function _setRegimeData(bars, smaData) {
+  const n = bars.length, P = 14;
+  const adx = new Float64Array(n);
+  if (n > P * 2) {
+    const sPdm = new Float64Array(n), sMdm = new Float64Array(n), sTr = new Float64Array(n);
+    let sp=0, sm=0, st=0;
+    for (let i = 1; i <= P; i++) {
+      const hd = bars[i].high - bars[i-1].high, ld = bars[i-1].low - bars[i].low;
+      sp += hd > ld && hd > 0 ? hd : 0;
+      sm += ld > hd && ld > 0 ? ld : 0;
+      st += Math.max(bars[i].high - bars[i].low,
+        Math.abs(bars[i].high - bars[i-1].close), Math.abs(bars[i].low - bars[i-1].close));
+    }
+    sPdm[P]=sp; sMdm[P]=sm; sTr[P]=st;
+    for (let i = P+1; i < n; i++) {
+      const hd = bars[i].high - bars[i-1].high, ld = bars[i-1].low - bars[i].low;
+      const tr = Math.max(bars[i].high - bars[i].low,
+        Math.abs(bars[i].high - bars[i-1].close), Math.abs(bars[i].low - bars[i-1].close));
+      sPdm[i] = sPdm[i-1] - sPdm[i-1]/P + (hd > ld && hd > 0 ? hd : 0);
+      sMdm[i] = sMdm[i-1] - sMdm[i-1]/P + (ld > hd && ld > 0 ? ld : 0);
+      sTr[i]  = sTr[i-1]  - sTr[i-1]/P  + tr;
+    }
+    let dxSum = 0, dxCnt = 0;
+    for (let i = P; i < 2*P && i < n; i++) {
+      const pdi = sTr[i] > 0 ? 100*sPdm[i]/sTr[i] : 0;
+      const mdi = sTr[i] > 0 ? 100*sMdm[i]/sTr[i] : 0;
+      const s2  = pdi + mdi;
+      dxSum += s2 > 0 ? 100*Math.abs(pdi-mdi)/s2 : 0; dxCnt++;
+    }
+    const adxStart = Math.min(2*P-1, n-1);
+    if (dxCnt > 0) adx[adxStart] = dxSum / dxCnt;
+    for (let i = adxStart+1; i < n; i++) {
+      const pdi = sTr[i] > 0 ? 100*sPdm[i]/sTr[i] : 0;
+      const mdi = sTr[i] > 0 ? 100*sMdm[i]/sTr[i] : 0;
+      const s2  = pdi + mdi;
+      adx[i] = (adx[i-1]*(P-1) + (s2 > 0 ? 100*Math.abs(pdi-mdi)/s2 : 0)) / P;
+    }
+  }
+  const smaMap  = new Map(smaData.map(s => [s.time, s.value]));
+  const adxThr  = CONFIG.profile.adx_threshold || 20;
+  regimeSeries.setData(bars.map((b, i) => {
+    const sv   = smaMap.get(b.time);
+    const adxV = adx[i];
+    let color;
+    if (sv == null || adxV === 0) {
+      color = 'rgba(154,163,176,0.10)';   // insufficient data
+    } else if (adxV < adxThr) {
+      color = 'rgba(154,163,176,0.12)';   // CHOPPY
+    } else if (b.close > sv) {
+      color = 'rgba(38,208,124,0.28)';    // BULL
+    } else {
+      color = 'rgba(255,84,104,0.20)';    // BEAR
+    }
+    return { time: b.time, value: 1, color };
+  }));
+}
+
+// ── Trade markers ────────────────────────────────────────────────────────────
+function _buildMarkers(trades) {
+  if (!trades || !trades.length) return [];
+  const out = [];
+  for (const t of trades) {
+    const isLong  = (t.direction || t.side || '').toUpperCase() === 'LONG';
+    const entryPx = t.entry_price ?? t.entry_px ?? 0;
+    const rVal    = t.r_multiple;
+    const rStr    = rVal != null ? `${rVal >= 0 ? '+' : ''}${rVal.toFixed(2)}R` : '';
+    const entryTs = t.entry_time || t.opened_at;
+    const exitTs  = t.exit_time  || t.closed_at;
+    if (!entryTs) continue;
+
+    // Entry arrow: below bar for LONG, above bar for SHORT
+    out.push({
+      time:     Math.floor(new Date(entryTs).getTime() / 1000),
+      position: isLong ? 'belowBar' : 'aboveBar',
+      color:    isLong ? '#26d07c' : '#ff5468',
+      shape:    isLong ? 'arrowUp' : 'arrowDown',
+      text:     `$${Math.round(entryPx)}`,
+    });
+
+    // Exit arrow: above bar for LONG (price moved up then came down), below for SHORT
+    if (exitTs) {
+      out.push({
+        time:     Math.floor(new Date(exitTs).getTime() / 1000),
+        position: isLong ? 'aboveBar' : 'belowBar',
+        color:    (t.pnl ?? 0) >= 0 ? '#26d07c' : '#ff5468',
+        shape:    isLong ? 'arrowDown' : 'arrowUp',
+        text:     rStr,
+      });
+    }
+  }
+  return out.sort((a, b) => a.time - b.time);  // LWC requires ascending order
+}
+
+function updateChartMarkers() {
+  const trades = viewMode === 'replay' ? (replayState.trades || []) : (liveState.trades || []);
+  candles.setMarkers(_buildMarkers(trades));
+}
+
+// ── Hard stop + Donchian-10 trailing stop price lines ─────────────────────────
+let _hardStopLine  = null;
+let _trailStopLine = null;
+
+function _clearPositionLines() {
+  if (_hardStopLine)  { try { candles.removePriceLine(_hardStopLine);  } catch(_){} _hardStopLine  = null; }
+  if (_trailStopLine) { try { candles.removePriceLine(_trailStopLine); } catch(_){} _trailStopLine = null; }
+}
+
+function updatePositionLines(pos, ind) {
+  _clearPositionLines();
+  if (!pos || !pos.side) return;
+
+  if (pos.hard_stop) {
+    _hardStopLine = candles.createPriceLine({
+      price: pos.hard_stop, color: '#ff5468',
+      lineWidth: 1, lineStyle: 2,          // 2 = Dashed
+      axisLabelVisible: true, title: 'Hard Stop',
+    });
+  }
+
+  const d10 = pos.side === 'LONG' ? ind?.donchian10_l : ind?.donchian10_h;
+  if (d10) {
+    _trailStopLine = candles.createPriceLine({
+      price: d10, color: 'rgba(245,177,51,0.70)',
+      lineWidth: 1, lineStyle: 1,          // 1 = Dotted
+      axisLabelVisible: true, title: 'D10 Trail',
+    });
+  }
+}
+
+/* ============================================================
+   WP-4  REPLAY MODE
+   Fixture is fetched from /api/replay at load time; replayState
+   is populated immediately so the toggle is instant.
+   The WebSocket handler only writes to liveState — no coupling.
+   ============================================================ */
+
+// ── Metric helpers ─────────────────────────────────────────────────────────
+function computeReplayMetrics(trades) {
+  if (!trades || !trades.length) return {};
+  let eq = 10000;
+  const eqSeries = [10000];
+  for (const t of trades) { eq += t.pnl; eqSeries.push(Math.round(eq * 100) / 100); }
+
+  let peak = eqSeries[0], mdd = 0;
+  for (const e of eqSeries) {
+    if (e > peak) peak = e;
+    if (peak > 0) mdd = Math.max(mdd, (peak - e) / peak);
+  }
+
+  const wins      = trades.filter(t => t.pnl > 0);
+  const losses    = trades.filter(t => t.pnl < 0);
+  const grossWin  = wins.reduce((s, t) => s + t.pnl, 0);
+  const grossLoss = Math.abs(losses.reduce((s, t) => s + t.pnl, 0));
+  const totPnl    = trades.reduce((s, t) => s + t.pnl, 0);
+  const n         = trades.length;
+
+  return {
+    profit_factor:  grossLoss > 0 ? Math.round(grossWin / grossLoss * 1000) / 1000 : null,
+    expectancy_usd: n > 0 ? Math.round(totPnl / n * 100) / 100 : null,
+    win_rate:       Math.round(wins.length / n * 1000) / 10,
+    max_drawdown:   Math.round(mdd * 10000) / 100,
+    n_trades:       n,
+    total_trades:   n,
+    peak_equity:    Math.round(peak * 100) / 100,
+    daily_pnl: 0, weekly_pnl: 0, current_drawdown_pct: 0,
+  };
+}
+
+function buildReplayEquityCurve(trades, startEquity) {
+  let eq = startEquity != null ? startEquity : 10000;
+  const out = [];
+  // Anchor one point before the first entry so the curve starts flat
+  if (trades.length) {
+    const t0 = Math.floor(new Date(trades[0].entry_time).getTime() / 1000) - 3600;
+    out.push({ time: t0, value: eq });
+  }
+  for (const t of trades) {
+    eq += t.pnl;
+    out.push({ time: Math.floor(new Date(t.exit_time).getTime() / 1000), value: Math.round(eq * 100) / 100 });
+  }
+  return out;
+}
+
+// Build replay metrics from pre-computed backtest stats when available,
+// falling back to computing from individual trades.
+function _replayMetricsFromStats(btStats, trades) {
+  if (btStats) {
+    let peak = 100000, eq = 100000;
+    for (const t of trades) { eq += t.pnl; if (eq > peak) peak = eq; }
+    return {
+      profit_factor:  btStats.profit_factor  != null ? Math.round(btStats.profit_factor  * 100) / 100 : null,
+      expectancy_usd: btStats.expectancy_usd != null ? Math.round(btStats.expectancy_usd * 100) / 100 : null,
+      win_rate:       btStats.win_rate       != null ? Math.round(btStats.win_rate * 1000) / 10 : 0,
+      max_drawdown:   btStats.max_drawdown   != null ? Math.round(btStats.max_drawdown * 10000) / 100 : 0,
+      n_trades:       btStats.n_trades   || trades.length,
+      total_trades:   btStats.n_trades   || trades.length,
+      peak_equity:    Math.round(peak * 100) / 100,
+      daily_pnl: 0, weekly_pnl: 0, current_drawdown_pct: 0,
+    };
+  }
+  return computeReplayMetrics(trades);
+}
+
+function renderMetrics(m, isReplay) {
+  if (!m) return;
+  const n = m.n_trades ?? m.total_trades ?? 0;
+
+  // Profit Factor
+  const pf    = m.profit_factor;
+  const elPf  = document.getElementById('met-pf');
+  const elPfS = document.getElementById('met-pf-sub');
+  if (elPf) {
+    if (pf != null) {
+      elPf.textContent = pf.toFixed(2);
+      elPf.className   = 'val ' + (pf >= 1.2 ? 'pos' : pf >= 1.0 ? 'gold' : 'neg');
+    } else {
+      elPf.textContent = '—'; elPf.className = 'val';
+    }
+  }
+  if (elPfS) elPfS.textContent = n > 0 ? (isReplay ? 'backtest sim' : 'live paper') : 'no closed trades';
+
+  // Expectancy / Trade
+  const exp    = m.expectancy_usd;
+  const elExp  = document.getElementById('met-exp');
+  const elExpS = document.getElementById('met-exp-sub');
+  if (elExp) {
+    if (exp != null) {
+      const sign = exp >= 0 ? '+' : '−';
+      elExp.textContent = sign + '$' + fmt(Math.abs(exp));
+      elExp.className   = 'val ' + (exp >= 0 ? 'pos' : 'neg');
+    } else {
+      elExp.textContent = '—'; elExp.className = 'val';
+    }
+  }
+  if (elExpS) elExpS.textContent = n > 0 ? 'per closed trade' : 'no closed trades';
+
+  // Win Rate
+  const elWr  = document.getElementById('met-wr');
+  const elWrS = document.getElementById('met-wr-sub');
+  if (elWr) elWr.textContent = n > 0 ? (m.win_rate ?? 0).toFixed(1) + '%' : '—';
+  if (elWrS) elWrS.textContent = n > 0 ? n + ' trades' : 'no closed trades';
+
+  // Max Drawdown
+  const dd    = m.max_drawdown ?? 0;
+  const elDd  = document.getElementById('met-dd');
+  const elDdS = document.getElementById('met-dd-sub');
+  if (elDd) { elDd.textContent = dd > 0 ? '−' + dd.toFixed(1) + '%' : '—'; elDd.className = 'val neg'; }
+  if (elDdS) elDdS.textContent = isReplay ? 'backtest period' : 'from peak equity';
+
+  // Trades
+  const elTr  = document.getElementById('met-trades');
+  const elTrS = document.getElementById('met-trades-sub');
+  if (elTr) elTr.textContent = n;
+  if (elTrS) elTrS.textContent = isReplay ? 'backtest trades' : 'since inception';
+}
+
+// ── Mode switch ─────────────────────────────────────────────────────────────
+function setReplayMode(active) {
+  viewMode = active ? 'replay' : 'live';
+
+  document.getElementById('tabLive').classList.toggle('active',  !active);
+  document.getElementById('tabReplay').classList.toggle('active', active);
+  document.getElementById('replay-banner').style.display = active ? 'flex' : 'none';
+  _sbSetMode(active);
+  document.querySelector('main').classList.toggle('replay-mode', active);
+  // WP-9: show scrubber in REPLAY, hide + reset in LIVE
+  const scrubEl = document.getElementById('scrubber');
+  if (scrubEl) scrubEl.style.display = active ? 'block' : 'none';
+  if (!active) {
+    scrubPause();
+    _scrubTrade = null;
+    document.getElementById('scrub-range').value   = 0;
+    document.getElementById('scrub-range').disabled = true;
+    document.getElementById('scrub-play').disabled  = true;
+    document.getElementById('scrub-select').value   = '-1';
+    document.getElementById('scrub-rbadge').textContent = '';
+    document.getElementById('scrub-ts').textContent = '—';
+  }
+
+  if (active) {
+    renderMetrics(replayState.metrics, true);
+    renderTrades(replayState.trades, true);
+    renderCircuitBreakers(replayState.metrics);
+    renderPosition(replayState.openPosition);
+    if (replayState.equityCurve && replayState.equityCurve.length) {
+      eqLine.setData(replayState.equityCurve);
+      eqChart.timeScale().fitContent();
+      const lastEqPt  = replayState.equityCurve[replayState.equityCurve.length - 1];
+      const peakEqVal = Math.max(...replayState.equityCurve.map(p => p.value));
+      if (lastEqPt) document.getElementById('eq-now').textContent  = '$' + fmt(lastEqPt.value);
+      document.getElementById('eq-peak').textContent = '$' + fmt(peakEqVal);
+    }
+    // WP-8: clear live stop lines, then reload 2000 bars to cover the full fixture
+    // date range before placing markers.
+    _clearPositionLines();
+    fetch('/api/bars?symbol=XAU_USD&granularity=M15&count=4500')
+      .then(r => r.json()).then(json => {
+        const bars = (json.bars || []).map(b => ({
+          ...b,
+          time: typeof b.time === 'string'
+            ? Math.floor(new Date(b.time).getTime() / 1000)
+            : (typeof b.time === 'number' && b.time > 1e10)
+              ? Math.floor(b.time / 1000) : b.time,
+        }));
+        if (!bars.length) { updateChartMarkers(); return; }
+        candles.setData(bars);
+        const smaData = smaSeries(bars, 200);
+        sma.setData(smaData);
+        dUp.setData(donchian(bars, 20, true));
+        dLo.setData(donchian(bars, 20, false));
+        _setRegimeData(bars, smaData);
+        chart.timeScale().fitContent();
+        last = { ...bars[bars.length - 1] };
+        barsLoaded = true;
+        _initScrubBars(bars);   // WP-9: pre-compute indicator states for scrubber
+        updateChartMarkers();
+      }).catch(() => updateChartMarkers());
+  } else {
+    renderMetrics(liveState.metrics, false);
+    renderTrades(liveState.trades, false);
+    renderCircuitBreakers(liveState.metrics);
+    renderPosition(liveState.openPosition);
+    // WP-8: restore live markers; next WS tick will recreate stop lines
+    _clearPositionLines();
+    updateChartMarkers();
+    // Restore live equity sparkline and peak label
+    fetch('/api/equity').then(r => r.json()).then(json => {
+      if (!json.curve || !json.curve.length) return;
+      const eqData = json.curve
+        .map(([ts, v]) => ({ time: Math.floor(new Date(ts).getTime() / 1000), value: v }))
+        .sort((a, b) => a.time - b.time)
+        .filter((p, i, arr) => i === 0 || p.time > arr[i - 1].time);
+      if (!eqData.length) return;
+      eqLine.setData(eqData);
+      eqChart.timeScale().fitContent();
+      const peakVal = Math.max(...eqData.map(p => p.value));
+      document.getElementById('eq-now').textContent  = '$' + fmt(eqData[eqData.length - 1].value);
+      document.getElementById('eq-peak').textContent = '$' + fmt(peakVal);
+    }).catch(() => {});
+  }
+}
+
+// ── Load fixture at startup ─────────────────────────────────────────────────
+fetch('/api/replay').then(r => r.json()).then(data => {
+  const trades   = Array.isArray(data) ? data : (data.trades || null);
+  if (!trades || !trades.length) return;
+  // Use pre-computed backtest stats when available (accurate PF, DD%, etc.)
+  const btStats  = (!Array.isArray(data) && data.stats) ? data.stats : null;
+  const startEq  = btStats ? 100000 : 10000;   // match initial equity of the backtest
+  replayState.trades       = trades;
+  replayState.openPosition = null;
+  replayState.metrics      = _replayMetricsFromStats(btStats, trades);
+  replayState.equityCurve  = buildReplayEquityCurve(trades, startEq);
+  const btn = document.getElementById('tabReplay');
+  if (btn) {
+    const label = btStats
+      ? `${trades.length} backtest trades · EXP-020 · ${data.start_date || ''}→${data.end_date || ''}`
+      : `${trades.length} backtest trades loaded`;
+    btn.title = label;
+  }
+}).catch(() => {});
+
+/* ============================================================
+   STRATEGY TAB — Validation report renderer
+   Fetches /api/validation on demand (called by setTab('strategy')).
+   Renders: status badge, in-sample stats, three gate results.
+   ============================================================ */
+function loadValidationReport() {
+  const loadingEl = document.getElementById('val-loading');
+  const contentEl = document.getElementById('val-content');
+  if (loadingEl) { loadingEl.style.display = ''; loadingEl.textContent = 'Loading validation report…'; }
+  if (contentEl) contentEl.style.display = 'none';
+
+  fetch('/api/validation').then(r => r.json()).then(report => {
+    if (loadingEl) loadingEl.style.display = 'none';
+    if (contentEl) contentEl.style.display = '';
+    _renderValidationReport(report);
+  }).catch(() => {
+    if (loadingEl) loadingEl.textContent = 'Could not load validation report — is the server running?';
+  });
+}
+
+function _renderValidationReport(report) {
+  const badge  = document.getElementById('val-badge');
+  const title  = document.getElementById('val-title');
+  const metaEl = document.getElementById('val-meta');
+
+  if (!report || report.error || report.validated === null) {
+    if (badge)  { badge.textContent = 'NO REPORT'; badge.className = 'val-badge val-none'; }
+    if (title)  title.textContent   = 'No Validation Report Found';
+    if (metaEl) metaEl.textContent  = report?.error || 'Run: python -m backtest.validate --profile swing --start 2020-01-01 --end 2026-01-01';
+    return;
+  }
+
+  const validated = report.validated;
+  if (badge) {
+    badge.textContent = validated ? '✓ VALIDATED' : '✗ NOT VALIDATED';
+    badge.className   = 'val-badge ' + (validated ? 'val-ok' : 'val-fail');
+  }
+  if (title) title.textContent = `${report.profile || 'Strategy'} — ${validated ? 'All gates passed' : 'One or more gates failed'}`;
+  if (metaEl) {
+    const dr = report.date_range || {};
+    metaEl.textContent = `Generated ${new Date(report.generated).toLocaleString('en-GB')} · Range ${dr.start || '?'} → ${dr.end || '?'}`;
+  }
+
+  // In-sample metrics strip
+  const ins  = report.in_sample || {};
+  const mEl  = document.getElementById('val-metrics-strip');
+  if (mEl) {
+    const pf    = ins.profit_factor != null ? ins.profit_factor.toFixed(2) : '—';
+    const pfCls = ins.profit_factor != null ? (ins.profit_factor >= 1.2 ? 'pos' : ins.profit_factor >= 1.0 ? 'gold' : 'neg') : '';
+    const expV  = ins.expectancy_usd;
+    const expTx = expV != null ? ((expV >= 0 ? '+' : '−') + '$' + fmt(Math.abs(expV))) : '—';
+    const expCls= expV != null ? (expV >= 0 ? 'pos' : 'neg') : '';
+    const wr    = ins.win_rate != null ? (ins.win_rate * 100).toFixed(1) + '%' : '—';
+    const dd    = ins.max_drawdown != null ? (ins.max_drawdown * 100).toFixed(1) + '%' : '—';
+    const nt    = ins.n_trades ?? '—';
+    mEl.innerHTML = `
+      <div class="metric"><span class="lbl">Profit Factor</span><span class="val ${pfCls}">${pf}</span><span class="sub">in-sample</span></div>
+      <div class="metric"><span class="lbl">Expectancy / Trade</span><span class="val ${expCls}">${expTx}</span><span class="sub">in-sample</span></div>
+      <div class="metric"><span class="lbl">Win Rate</span><span class="val">${wr}</span><span class="sub">in-sample</span></div>
+      <div class="metric"><span class="lbl">Max Drawdown</span><span class="val neg">−${dd}</span><span class="sub">in-sample</span></div>
+      <div class="metric"><span class="lbl">Trades</span><span class="val">${nt}</span><span class="sub">in-sample</span></div>`;
+  }
+
+  // Gate result rows
+  const gEl = document.getElementById('val-gates');
+  if (gEl && report.gates) {
+    const { walk_forward: wf = {}, cost_stress: cs = {}, monte_carlo: mc = {} } = report.gates;
+    const runs = cs.runs || {};
+
+    const gateRow = (label, passed, detail) => {
+      const cls = passed ? 'gate-ok' : 'gate-fail';
+      return `<div class="val-gate ${cls}">
+        <div class="gate-ic">${passed ? '✓' : '✗'}</div>
+        <div class="gate-body">
+          <div class="gate-lbl">${label}</div>
+          <div class="gate-detail">${detail}</div>
+        </div>
+        <div class="gate-pill ${passed ? 'pill-ok' : 'pill-fail'}">${passed ? 'PASS' : 'FAIL'}</div>
+      </div>`;
+    };
+
+    const wfDetail = `OOS avg PF ${wf.avg_pf ?? '?'} (gate ≥ ${wf.pf_gate ?? 1.20}) · ${wf.oos_trades ?? 0} OOS trades (gate ≥ ${wf.trade_gate ?? 20})`;
+    const csDetail = `PF at 1×: ${runs['1.0x']?.profit_factor ?? '?'} · 1.5×: ${runs['1.5x']?.profit_factor ?? '?'} · 2×: ${runs['2.0x']?.profit_factor ?? '?'} (gate: PF ≥ ${cs.pf_gate_at_2x ?? 1.0} at 2×)`;
+    const ddLimPct = ((mc.dd_limit ?? 0.25) * 100).toFixed(0);
+    const mcDetail = `P(DD>${ddLimPct}%) = ${((mc.p_exceed_limit ?? 0) * 100).toFixed(1)}% (gate < ${((mc.p_exceed_gate ?? 0.05) * 100).toFixed(0)}%) · p95 DD = ${((mc.p95_drawdown ?? 0) * 100).toFixed(1)}% · ${mc.n_samples ?? 500} samples`;
+
+    gEl.innerHTML =
+      gateRow('Walk-Forward (OOS)', wf.passed, wfDetail) +
+      gateRow('Cost Stress (2×)',   cs.passed, csDetail) +
+      gateRow('Monte Carlo',        mc.passed, mcDetail);
+  }
+}
+
+/* ============================================================
+   WP-5  RISK CIRCUIT BREAKERS
+   Reads all limit thresholds from CONFIG.risk (never hardcoded).
+   Drives from activeState().metrics so it responds in both
+   LIVE and REPLAY modes.
+   Fill escalates: green → amber (>60 %) → red (>85 %).
+   When any breaker trips it also updates the entry-state
+   indicator in Predictive Telemetry (WP-6 Capacity block stub).
+   ============================================================ */
+let circuitTripped = false;
+
+function _setCbGauge(key, usedDollars, limitDollars, pctOfLimit, tripped) {
+  const gauge = document.getElementById('cbg-' + key);
+  if (!gauge) return;
+  gauge.classList.toggle('cbg-tripped', tripped);
+
+  const fill = document.getElementById('cb-' + key + '-fill');
+  if (fill) {
+    fill.style.width = Math.min(100, pctOfLimit).toFixed(1) + '%';
+    fill.className = 'cb-fill' +
+      (pctOfLimit > 85 ? ' cb-red' : pctOfLimit > 60 ? ' cb-amber' : '');
+  }
+
+  const dlr = document.getElementById('cb-' + key + '-dlr');
+  if (dlr) dlr.textContent = '$' + Math.round(usedDollars) + ' / $' + Math.round(limitDollars);
+
+  const pctEl = document.getElementById('cb-' + key + '-pct');
+  if (pctEl) pctEl.textContent = Math.round(pctOfLimit) + '%';
+
+  const st = document.getElementById('cb-' + key + '-st');
+  if (st) {
+    st.textContent = tripped ? 'circuit TRIPPED — entries halted' : 'circuit armed';
+    st.className   = 'cb-st' + (tripped ? ' tripped' : '');
+  }
+}
+
+function renderCircuitBreakers(metrics) {
+  if (!metrics) return;
+  const r    = CONFIG.risk;
+  const peak = (metrics.peak_equity > 0) ? metrics.peak_equity : 10000;
+
+  // Daily P&L  — loss = positive used value
+  const dailyUsed  = Math.max(0, -(metrics.daily_pnl  || 0));
+  const dailyLim   = peak * (r.daily_loss_limit_pct  || 0.02);
+  const dailyPct   = dailyLim > 0 ? (dailyUsed  / dailyLim)  * 100 : 0;
+  const dailyTrip  = dailyUsed  >= dailyLim  && dailyLim  > 0;
+  _setCbGauge('daily',  dailyUsed,  dailyLim,  dailyPct,  dailyTrip);
+
+  // Weekly P&L
+  const weeklyUsed = Math.max(0, -(metrics.weekly_pnl || 0));
+  const weeklyLim  = peak * (r.weekly_loss_limit_pct || 0.05);
+  const weeklyPct  = weeklyLim > 0 ? (weeklyUsed / weeklyLim) * 100 : 0;
+  const weeklyTrip = weeklyUsed >= weeklyLim && weeklyLim > 0;
+  _setCbGauge('weekly', weeklyUsed, weeklyLim, weeklyPct, weeklyTrip);
+
+  // Drawdown from peak
+  const ddPctNow  = metrics.current_drawdown_pct || 0;           // already %
+  const ddLimPct  = (r.max_drawdown_pct || 0.15) * 100;          // %
+  const ddUsed    = peak * (ddPctNow / 100);                      // $ loss from peak
+  const ddLimDol  = peak * (r.max_drawdown_pct || 0.15);         // $ limit
+  const ddPctFill = ddLimPct > 0 ? (ddPctNow / ddLimPct) * 100 : 0;
+  const ddTrip    = ddPctNow >= ddLimPct;
+  _setCbGauge('dd', ddUsed, ddLimDol, ddPctFill, ddTrip);
+
+  circuitTripped = dailyTrip || weeklyTrip || ddTrip;
+
+  // Also reflect halt in Predictive Telemetry entry indicator (t-state).
+  // The authoritative HALTED pill lives in the WP-6 Capacity block (renderPosition).
+  const tEl = document.getElementById('t-state');
+  if (tEl) {
+    if (circuitTripped) {
+      tEl.dataset.cbHalt = '1';
+      tEl.textContent    = 'ENTRIES HALTED — circuit tripped';
+      tEl.className      = 'trig wait';
+      tEl.style.cssText  = 'background:rgba(255,84,104,.08);color:var(--red);border-color:rgba(255,84,104,.25)';
+    } else {
+      delete tEl.dataset.cbHalt;
+      tEl.style.cssText  = '';   // applyState() owns the text/class when clear
+    }
+  }
+}
+
+/* ============================================================
    CHART STATE
    ============================================================ */
 let last = null;
@@ -817,7 +1635,7 @@ function _etaMinutes(gap) {
    LOAD HISTORICAL BARS FROM BACKEND
    ============================================================ */
 async function loadBars() {
-  const res = await fetch('/api/bars?symbol=XAU_USD&granularity=H1&count=250');
+  const res = await fetch('/api/bars?symbol=XAU_USD&granularity=M15&count=500');
   const json = await res.json();
   const bars = (json.bars || []).map(b => ({
     ...b,
@@ -839,9 +1657,11 @@ loadBars().then(bars => {
   }
   console.log('[chart] loaded', bars.length, 'bars, first:', bars[0], 'last:', bars[bars.length - 1]);
   candles.setData(bars);
-  sma.setData(smaSeries(bars, 200));
+  const smaData = smaSeries(bars, 200);
+  sma.setData(smaData);
   dUp.setData(donchian(bars, 20, true));
   dLo.setData(donchian(bars, 20, false));
+  _setRegimeData(bars, smaData);   // WP-8
   chart.timeScale().fitContent();
   last = { ...bars[bars.length - 1] };
   sessionOpen = last.close;
@@ -859,8 +1679,18 @@ fetch('/api/equity').then(r=>r.json()).then(json => {
   if (eqData.length === 0) return;
   eqLine.setData(eqData);
   eqChart.timeScale().fitContent();
-  const latest = eqData[eqData.length - 1];
-  document.getElementById('eq-now').textContent = '$' + fmt(latest.value);
+  const latest  = eqData[eqData.length - 1];
+  const peakVal = Math.max(...eqData.map(p => p.value));
+  document.getElementById('eq-now').textContent  = '$' + fmt(latest.value);
+  document.getElementById('eq-peak').textContent = '$' + fmt(peakVal);
+}).catch(() => {});
+
+/* load initial stats → populate peak from authoritative source */
+fetch('/api/stats').then(r => r.json()).then(stats => {
+  liveState.metrics = stats;
+  renderMetrics(stats, false);
+  if (stats.peak_equity) document.getElementById('eq-peak').textContent = '$' + fmt(stats.peak_equity);
+  if (stats.current_equity) document.getElementById('eq-now').textContent = '$' + fmt(stats.current_equity);
 }).catch(() => {});
 
 /* load initial trades → liveState */
@@ -872,6 +1702,7 @@ fetch('/api/trades').then(r=>r.json()).then(json => {
 }).catch(() => {});
 
 /* load initial position → liveState */
+renderPosition(null);   // render flat Capacity block immediately; fetch will repaint
 fetch('/api/position').then(r=>r.json()).then(json => {
   liveState.openPosition = json ?? null;
   renderPosition(activeState().openPosition);
@@ -897,20 +1728,24 @@ function updatePriceDisplay(px, chg) {
 }
 
 /* ============================================================
-   H1 COUNTDOWN
+   M15 COUNTDOWN
    ============================================================ */
-let secs = 3599;
+let secs = 899;
 function updateClock(lastBarEvalTs) {
   if (!lastBarEvalTs) return;
   const elapsed = Math.floor((Date.now() - new Date(lastBarEvalTs).getTime()) / 1000);
-  secs = Math.max(0, 3600 - (elapsed % 3600));
+  secs = Math.max(0, 900 - (elapsed % 900));
 }
 function clock(){
-  secs--; if(secs<0) secs=3599;
+  secs--; if(secs<0) secs=899;
   const m=String(Math.floor(secs/60)).padStart(2,'0');
   const s=String(secs%60).padStart(2,'0');
-  document.getElementById('t-clock').textContent=`${m}:${s}`;
-  document.getElementById('hclock').textContent= secs<60 ? `${secs}s` : `${Math.floor(secs/60)}m`;
+  const ts = `${m}:${s}`;
+  const tClock = document.getElementById('t-clock');
+  if (tClock) tClock.textContent = ts;
+  document.getElementById('hclock').textContent = secs<60 ? `${secs}s` : `${Math.floor(secs/60)}m`;
+  const sbH1 = document.getElementById('sb-m15');
+  if (sbH1) sbH1.textContent = ts;
 }
 setInterval(clock, 1000);
 
@@ -1114,52 +1949,120 @@ function applyState(s) {
 /* ============================================================
    RENDER POSITION
    ============================================================ */
+/* ============================================================
+   WP-6  CAPACITY BLOCK
+   Informative when flat; live when a position is open.
+   Reads CONFIG for risk % and slot count.
+   circuitTripped (WP-5) drives the ARMED / HALTED pill state.
+   Driven by activeState() — works in both LIVE and REPLAY.
+   ============================================================ */
 function renderPosition(pos) {
-  const box = document.getElementById('posbox');
-  if (!pos || !pos.side) {
-    box.innerHTML = '<div class="pos-empty">— No open position —</div>';
-    return;
+  const box      = document.getElementById('posbox');
+  const isReplay = viewMode === 'replay';
+  const hasPos   = !!(pos && pos.side);
+  const riskPct  = ((CONFIG.profile.risk_per_trade || 0.01) * 100).toFixed(1);
+
+  // ── slot bar ────────────────────────────────────────────────────────
+  const slotsFill = hasPos
+    ? `<span class="gold">1</span> / 1 <span class="faint">slot</span>`
+    : `0 / 1 <span class="faint">slot</span>`;
+
+  // ── open notional ───────────────────────────────────────────────────
+  const notional = hasPos
+    ? '$' + Math.round(pos.entry_px * pos.size * 100).toLocaleString('en-US')
+    : '$0';
+
+  // ── position detail rows (only when open) ───────────────────────────
+  let posRows = '';
+  if (hasPos) {
+    const pnl      = pos.unrealized_pnl ?? 0;
+    const pnlCls   = pnl >= 0 ? 'pos' : 'neg';
+    const pnlSign  = pnl >= 0 ? '+' : '−';
+
+    const stopDist = Math.abs(pos.entry_px - pos.hard_stop);
+    const initRisk = stopDist * pos.size * 100;
+    const rMult    = initRisk > 0 ? pnl / initRisk : 0;
+    const rCls     = rMult >= 0 ? 'pos' : 'neg';
+    const rStr     = (rMult >= 0 ? '+' : '−') + Math.abs(rMult).toFixed(2) + 'R';
+
+    const curPx    = pos.current_px || pos.entry_px;
+    const distPx   = pos.side === 'LONG' ? curPx - pos.hard_stop : pos.hard_stop - curPx;
+    const distCls  = distPx >= 0 ? 'pos' : 'neg';
+
+    posRows = `
+      <div class="cap-sep"></div>
+      <div class="cap-row">
+        <span class="cap-k">Side</span>
+        <span class="side ${pos.side.toLowerCase()}" style="font-size:10px">${pos.side}</span>
+      </div>
+      <div class="cap-row">
+        <span class="cap-k">Unrealized</span>
+        <span class="cap-v ${pnlCls}">${pnlSign}$${fmt(Math.abs(pnl))}</span>
+      </div>
+      <div class="cap-row">
+        <span class="cap-k">R multiple</span>
+        <span class="cap-v ${rCls}">${rStr}</span>
+      </div>
+      <div class="cap-row">
+        <span class="cap-k">Dist. to stop</span>
+        <span class="cap-v ${distCls}">$${fmt(Math.abs(distPx))}</span>
+      </div>`;
   }
-  const pnl = pos.unrealized_pnl ?? 0;
-  const pnlCls  = pnl >= 0 ? 'pos' : 'neg';
-  const pnlSign = pnl >= 0 ? '+' : '−';
+
+  // ── entry-state pill ────────────────────────────────────────────────
+  let pillCls, pillTxt;
+  if (isReplay) {
+    pillCls = 'cap-replay';  pillTxt = 'REPLAY · historical fills only';
+  } else if (hasPos) {
+    pillCls = 'cap-inpos';   pillTxt = 'IN POSITION · monitoring exit';
+  } else if (circuitTripped) {
+    pillCls = 'cap-halted';  pillTxt = 'HALTED · circuit breaker tripped';
+  } else {
+    pillCls = 'cap-armed';   pillTxt = 'ARMED · entry ready';
+  }
+
   box.innerHTML = `
-    <div style="padding:14px 16px;display:flex;flex-direction:column;gap:9px">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span class="side ${pos.side.toLowerCase()}">${pos.side}</span>
-        <span class="mono ${pnlCls}" style="font-size:16px;font-weight:600">
-          ${pnlSign}$${fmt(Math.abs(pnl))}
-        </span>
+    <div class="cap-section">
+      <div class="cap-row">
+        <span class="cap-k">Concurrent</span>
+        <span class="cap-v">${slotsFill}</span>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;font-size:12px">
-        <div><span class="dim">Entry</span><br><b class="mono">$${fmt(pos.entry_px)}</b></div>
-        <div><span class="dim">Size</span><br><b class="mono">${pos.size} oz</b></div>
-        <div><span class="dim">Stop</span><br><b class="mono neg">$${fmt(pos.hard_stop)}</b></div>
-        <div><span class="dim">R:R</span><br><b class="mono">${pos.rr ?? '—'}</b></div>
+      <div class="cap-row">
+        <span class="cap-k">Risk / trade</span>
+        <span class="cap-v">${riskPct}%</span>
       </div>
+      <div class="cap-row">
+        <span class="cap-k">Open notional</span>
+        <span class="cap-v${hasPos ? ' gold' : ''}">${notional}</span>
+      </div>
+      ${posRows}
+      <div class="cap-pill ${pillCls}">${pillTxt}</div>
     </div>`;
 }
 
 /* ============================================================
    RENDER TRADES
    ============================================================ */
-function renderTrades(trades) {
+function renderTrades(trades, animate = false) {
   const box = document.querySelector('.trades');
   if (!trades || trades.length === 0) {
     box.innerHTML = '<div class="trades-empty">No closed trades yet</div>';
     return;
   }
   document.querySelector('.card-h.row .faint').textContent = trades.length + ' shown';
-  box.innerHTML = trades.slice(0, 20).map(t => {
+  box.innerHTML = trades.slice(0, 20).map((t, i) => {
     const pnl  = t.pnl ?? 0;
     const cls  = pnl >= 0 ? 'pos' : 'neg';
     const sign = pnl >= 0 ? '+' : '−';
-    const closeTs = t.closed_at || t.opened_at || '';
-    const label = closeTs
-      ? new Date(closeTs).toLocaleString('en-GB',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})
+    // Support both live trades (closed_at/opened_at) and replay trades (exit_time/entry_time)
+    const ts    = t.closed_at || t.exit_time || t.opened_at || t.entry_time || '';
+    const label = ts
+      ? new Date(ts).toLocaleString('en-GB',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})
       : '—';
-    return `<div class="trade-row">
-      <span class="side ${t.side.toLowerCase()}">${t.side}</span>
+    const side  = t.side || t.direction || '?';
+    const delay = animate ? ` style="animation-delay:${i * 55}ms"` : '';
+    return `<div class="trade-row${animate ? ' animate' : ''}"${delay}>
+      <span class="side ${side.toLowerCase()}">${side}</span>
       <span class="dim" style="font-size:11px">${label}</span>
       <span class="mono ${cls}" style="font-size:12px;font-weight:600">${sign}$${fmt(Math.abs(pnl))}</span>
     </div>`;
@@ -1199,7 +2102,15 @@ function connectWS() {
     // ── Write ONLY to liveState — no viewMode reference in this handler ──
     if (d.position !== undefined) liveState.openPosition = d.position ?? null;
     if (d.trades !== undefined)   liveState.trades       = d.trades   ?? [];
-    if (d.stats  !== undefined)   liveState.metrics      = d.stats    ?? {};
+    if (d.stats  !== undefined) {
+      liveState.metrics = d.stats ?? {};
+      if (viewMode === 'live') {
+        renderMetrics(liveState.metrics, false);
+        // Update peak equity label from authoritative server stats
+        const pk = liveState.metrics.peak_equity;
+        if (pk) document.getElementById('eq-peak').textContent = '$' + fmt(pk);
+      }
+    }
 
     // ── Chart always streams live, regardless of viewMode ────────────────
     if (d.current_price !== undefined) {
@@ -1211,39 +2122,71 @@ function connectWS() {
       last = { time: d.candle.time, open: d.candle.open,
                high: d.candle.high, low: d.candle.low, close: d.candle.close };
       candles.update(last);
+      // WP-8: color the regime strip bar with the engine's authoritative regime
+      const regCol = d.regime === 'BULL' ? 'rgba(38,208,124,0.28)'
+                   : d.regime === 'BEAR' ? 'rgba(255,84,104,0.20)'
+                   : 'rgba(154,163,176,0.10)';
+      regimeSeries.update({ time: d.candle.time, value: 1, color: regCol });
     }
 
     // ── Strategy state (always reflects live engine) ──────────────────────
+    // WP-9: when the scrubber is active it owns the decision tree and capacity
+    // block — suppress these WS-driven updates so the scrubber isn't overwritten.
     const ind = d.indicators || {};
     _trackClose(ind.close ?? null);   // feed ETA estimator
-    applyState({
-      regime:          d.regime,
-      adx:             d.adx,
-      atr:             ind.atr14,
-      vol_ratio:       ind.vol_ratio,
-      sma200:          ind.sma200,
-      close:           ind.close,
-      donchian_high:   ind.donchian20_h,
-      donchian20_l:    ind.donchian20_l,
-      donchian10_h:    ind.donchian10_h,
-      donchian10_l:    ind.donchian10_l,
-      dist_to_trigger: d.proximity?.distance,
-      rule2_triggered: d.proximity?.triggered,
-      has_position:    !!(d.position && d.position.side),
-      position_side:   d.position?.side ?? null,
-      position_stop:   d.position?.hard_stop ?? null,
-    });
+    if (viewMode === 'live' || !_scrubTrade) {
+      applyState({
+        regime:          d.regime,
+        adx:             d.adx,
+        atr:             ind.atr14,
+        vol_ratio:       ind.vol_ratio,
+        sma200:          ind.sma200,
+        close:           ind.close,
+        donchian_high:   ind.donchian20_h,
+        donchian20_l:    ind.donchian20_l,
+        donchian10_h:    ind.donchian10_h,
+        donchian10_l:    ind.donchian10_l,
+        dist_to_trigger: d.proximity?.distance,
+        rule2_triggered: d.proximity?.triggered,
+        has_position:    !!(d.position && d.position.side),
+        position_side:   d.position?.side ?? null,
+        position_stop:   d.position?.hard_stop ?? null,
+      });
+    }
+
+    // ── WP-5 Circuit breakers (runs after applyState so it can override t-state)
+    renderCircuitBreakers(activeState().metrics);
 
     // ── Equity sparkline (always live) ────────────────────────────────────
     if (d.equity !== undefined && d.equity !== null) {
       const eqVal = Array.isArray(d.equity) ? d.equity[1] : d.equity;
       eqLine.update({ time: Math.floor(Date.now() / 1000), value: eqVal });
       document.getElementById('eq-now').textContent = '$' + fmt(eqVal);
+      // Peak comes from stats (updated above); fall back to tracking locally
+      const pkEl = document.getElementById('eq-peak');
+      if (pkEl && pkEl.textContent === '—') pkEl.textContent = '$' + fmt(eqVal);
     }
 
     // ── Render position + trades from activeState() ───────────────────────
-    renderPosition(activeState().openPosition);
-    if (d.trades !== undefined) renderTrades(activeState().trades);
+    // WP-9: scrubber owns renderPosition and stop lines while active
+    if (!_scrubTrade) {
+      renderPosition(activeState().openPosition);
+    }
+    if (d.trades !== undefined) {
+      renderTrades(activeState().trades);
+      if (viewMode === 'live') updateChartMarkers();  // WP-8: update entry/exit markers
+    }
+    // WP-8/WP-9: update stop lines (skipped when scrubber owns them)
+    if (!_scrubTrade) {
+      updatePositionLines(d.position, d.indicators);
+    }
+
+    // ── Status bar: last-tick timestamp ──────────────────────────────────
+    if (d.last_tick_ts) {
+      const sbTick = document.getElementById('sb-tick');
+      if (sbTick) sbTick.textContent = new Date(d.last_tick_ts)
+        .toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:'UTC'}) + ' UTC';
+    }
 
     // ── Clock + profile badge ─────────────────────────────────────────────
     if (d.last_bar_eval_ts) updateClock(d.last_bar_eval_ts);
@@ -1267,6 +2210,286 @@ function connectWS() {
     document.querySelector('.live .dot').style.background = 'var(--green)';
   };
 }
+/* ============================================================
+   WP-9  REPLAY SCRUBBER
+   Operates purely on fixture data within replayState.  Never
+   touches liveState or the WebSocket.  Hidden in LIVE mode.
+
+   Public surface used by setReplayMode:
+     _initScrubBars(bars)   — call after 2000-bar fetch resolves
+     scrubPause()           — called before mode switches
+
+   Internal flow:
+     _scrubSelectTrade(i)   picks one fixture trade, sets slider
+     scrubGoTo(relIdx)      moves playhead; updates tree + lines
+     scrubPlay/scrubPause   start/stop 1 bar/sec advance
+   ============================================================ */
+
+// ── State ────────────────────────────────────────────────────────────────────
+let _scrubBars   = null;   // 2000-bar array (set by _initScrubBars)
+let _scrubStates = null;   // pre-computed indicator state per bar index
+let _scrubBarMap = null;   // Map<time→globalIdx> for O(1) bar lookup
+let _scrubTrade  = null;   // currently selected fixture trade object
+let _scrubFrom   = 0;      // first global bar index for the current trade window
+let _scrubTo     = 0;      // last  global bar index
+let _scrubTimer  = null;   // play interval handle
+
+// ── Pre-compute all indicator states for the full bar array ─────────────────
+// Runs in <3ms for 2000 bars.  ADX matches Python's Wilder-sum convention.
+function _computeAllStates(bars) {
+  const n = bars.length, P = 14;
+  const states = new Array(n).fill(null);
+  if (n < P * 2 + 200) return states;
+
+  // ATR(14) — Wilder EMA, seed = mean of first P true ranges
+  const atr = new Float64Array(n);
+  let atrSeed = 0;
+  for (let i = 1; i <= P; i++) {
+    atrSeed += Math.max(bars[i].high - bars[i].low,
+      Math.abs(bars[i].high - bars[i-1].close),
+      Math.abs(bars[i].low  - bars[i-1].close));
+  }
+  atr[P] = atrSeed / P;
+  for (let i = P+1; i < n; i++) {
+    const tr = Math.max(bars[i].high - bars[i].low,
+      Math.abs(bars[i].high - bars[i-1].close),
+      Math.abs(bars[i].low  - bars[i-1].close));
+    atr[i] = (atr[i-1] * (P-1) + tr) / P;
+  }
+
+  // ADX(14) — Wilder-sum smoothed +DM/-DM/TR → DI → DX → ADX
+  // Seed accumulation matches Python signal_generator.py convention
+  const sPdm = new Float64Array(n), sMdm = new Float64Array(n), sTr = new Float64Array(n);
+  let sp=0, sm=0, st=0;
+  for (let i = 1; i <= P; i++) {
+    const hd = bars[i].high - bars[i-1].high, ld = bars[i-1].low - bars[i].low;
+    sp += hd > ld && hd > 0 ? hd : 0;
+    sm += ld > hd && ld > 0 ? ld : 0;
+    st += Math.max(bars[i].high - bars[i].low,
+      Math.abs(bars[i].high - bars[i-1].close), Math.abs(bars[i].low - bars[i-1].close));
+  }
+  sPdm[P]=sp; sMdm[P]=sm; sTr[P]=st;
+  for (let i = P+1; i < n; i++) {
+    const hd = bars[i].high - bars[i-1].high, ld = bars[i-1].low - bars[i].low;
+    const tr = Math.max(bars[i].high - bars[i].low,
+      Math.abs(bars[i].high - bars[i-1].close), Math.abs(bars[i].low - bars[i-1].close));
+    sPdm[i] = sPdm[i-1] - sPdm[i-1]/P + (hd > ld && hd > 0 ? hd : 0);
+    sMdm[i] = sMdm[i-1] - sMdm[i-1]/P + (ld > hd && ld > 0 ? ld : 0);
+    sTr[i]  = sTr[i-1]  - sTr[i-1]/P  + tr;
+  }
+  const adx = new Float64Array(n);
+  let dxSum = 0, dxCnt = 0;
+  for (let i = P; i < 2*P && i < n; i++) {
+    const pdi = sTr[i] > 0 ? 100*sPdm[i]/sTr[i] : 0;
+    const mdi = sTr[i] > 0 ? 100*sMdm[i]/sTr[i] : 0;
+    const s2  = pdi + mdi;
+    dxSum += s2 > 0 ? 100*Math.abs(pdi-mdi)/s2 : 0; dxCnt++;
+  }
+  const adxStart = Math.min(2*P-1, n-1);
+  if (dxCnt > 0) adx[adxStart] = dxSum / dxCnt;
+  for (let i = adxStart+1; i < n; i++) {
+    const pdi = sTr[i] > 0 ? 100*sPdm[i]/sTr[i] : 0;
+    const mdi = sTr[i] > 0 ? 100*sMdm[i]/sTr[i] : 0;
+    const s2  = pdi + mdi;
+    adx[i] = (adx[i-1]*(P-1) + (s2 > 0 ? 100*Math.abs(pdi-mdi)/s2 : 0)) / P;
+  }
+
+  // SMA200 — rolling sum
+  const sma200 = new Float64Array(n).fill(NaN);
+  let ss = 0;
+  for (let i = 0; i < n; i++) {
+    ss += bars[i].close;
+    if (i >= 200) ss -= bars[i-200].close;
+    if (i >= 199) sma200[i] = ss / 200;
+  }
+
+  // vol_ratio = ATR(14) / 100-bar median ATR — cached once, O(n) amortised
+  const volRatio = new Float64Array(n);
+  for (let i = 100; i < n; i++) {
+    if (atr[i] === 0) continue;
+    const win = [];
+    for (let j = i - 99; j <= i; j++) { if (atr[j] > 0) win.push(atr[j]); }
+    if (!win.length) continue;
+    win.sort((a, b) => a - b);
+    const mid = win.length >> 1;
+    const med = win.length & 1 ? win[mid] : (win[mid-1] + win[mid]) / 2;
+    volRatio[i] = med > 0 ? atr[i] / med : 0;
+  }
+
+  // Build state object per bar (Donchian uses Python convention: excludes current bar)
+  for (let i = 230; i < n; i++) {
+    if (isNaN(sma200[i]) || atr[i] === 0) continue;
+    let d20h=-1e9, d20l=1e9, d10h=-1e9, d10l=1e9;
+    for (let j=i-20; j<i; j++) { if(bars[j].high>d20h) d20h=bars[j].high; if(bars[j].low<d20l) d20l=bars[j].low; }
+    for (let j=i-10; j<i; j++) { if(bars[j].high>d10h) d10h=bars[j].high; if(bars[j].low<d10l) d10l=bars[j].low; }
+    const close = bars[i].close, adxV = adx[i], smaV = sma200[i];
+    states[i] = {
+      regime:        adxV < 20 ? 'NEUTRAL' : close > smaV ? 'BULL' : 'BEAR',
+      adx:           adxV,  atr: atr[i],  vol_ratio: volRatio[i] > 0 ? volRatio[i] : null,
+      sma200:        smaV,  close,
+      donchian_high: d20h > -1e8 ? d20h : null,  donchian20_l: d20l < 1e8 ? d20l : null,
+      donchian10_h:  d10h > -1e8 ? d10h : null,  donchian10_l: d10l < 1e8 ? d10l : null,
+    };
+  }
+  return states;
+}
+
+// ── Initialise scrubber after 2000 bars are loaded ───────────────────────────
+function _initScrubBars(bars) {
+  _scrubBars   = bars;
+  _scrubBarMap = new Map(bars.map((b, i) => [b.time, i]));
+  _scrubStates = _computeAllStates(bars);
+  _scrubPopulateSelect();
+}
+
+function _scrubPopulateSelect() {
+  const sel = document.getElementById('scrub-select');
+  if (!sel) return;
+  sel.innerHTML = '<option value="-1">Select trade to scrub…</option>';
+  (replayState.trades || []).forEach((t, i) => {
+    const dir = t.direction || t.side || '?';
+    const dt  = new Date(t.entry_time || t.opened_at)
+      .toLocaleDateString('en-GB', {month:'short', day:'numeric'});
+    const r   = t.r_multiple != null
+      ? ` · ${t.r_multiple >= 0 ? '+' : ''}${t.r_multiple.toFixed(2)}R` : '';
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = `#${i+1} · ${dir} · ${dt}${r}`;
+    sel.appendChild(opt);
+  });
+  sel.disabled = false;
+}
+
+// ── Select a trade and set up the slider ─────────────────────────────────────
+function _scrubSelectTrade(i) {
+  if (i < 0 || !replayState.trades || !_scrubBars) return;
+  scrubPause();
+  _scrubTrade = replayState.trades[i];
+
+  const entryTs = Math.floor(new Date(_scrubTrade.entry_time).getTime() / 1000);
+  const exitTs  = Math.floor(new Date(_scrubTrade.exit_time).getTime()  / 1000);
+
+  // Find nearest bar indices (exact match or next bar)
+  let ei = _scrubBarMap.get(entryTs) ?? -1, xi = _scrubBarMap.get(exitTs) ?? -1;
+  if (ei < 0) { for (let k=0; k<_scrubBars.length; k++) { if (_scrubBars[k].time >= entryTs) { ei=k; break; } } }
+  if (xi < 0) { for (let k=_scrubBars.length-1; k>=0; k--) { if (_scrubBars[k].time <= exitTs)  { xi=k; break; } } }
+  if (ei < 0 || xi < 0) return;
+
+  _scrubFrom = Math.max(0, ei - 24);              // 24 bars of pre-trade context
+  _scrubTo   = Math.min(_scrubBars.length-1, xi + 12);
+
+  const range = document.getElementById('scrub-range');
+  range.min = 0; range.max = _scrubTo - _scrubFrom; range.value = ei - _scrubFrom;
+  range.disabled = false;
+  document.getElementById('scrub-play').disabled = false;
+
+  const fmt2 = t => new Date(t*1000).toLocaleString('en-GB',
+    {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'UTC'});
+  document.getElementById('scrub-t0').textContent = fmt2(_scrubBars[_scrubFrom].time);
+  document.getElementById('scrub-t1').textContent = fmt2(_scrubBars[_scrubTo].time);
+
+  // Fit chart to the trade window
+  chart.timeScale().setVisibleRange({
+    from: _scrubBars[_scrubFrom].time,
+    to:   _scrubBars[_scrubTo].time,
+  });
+
+  scrubGoTo(ei - _scrubFrom);   // jump to entry bar
+}
+
+// ── Move playhead to relative index ─────────────────────────────────────────
+function scrubGoTo(relIdx) {
+  if (!_scrubBars || !_scrubStates || !_scrubTrade) return;
+  relIdx = Math.max(0, Math.min(relIdx, _scrubTo - _scrubFrom));
+  const gi    = _scrubFrom + relIdx;
+  const bar   = _scrubBars[gi];
+  const state = _scrubStates[gi];
+  if (!bar) return;
+
+  const barTime   = bar.time;
+  const entryTime = Math.floor(new Date(_scrubTrade.entry_time).getTime() / 1000);
+  const exitTime  = Math.floor(new Date(_scrubTrade.exit_time).getTime()  / 1000);
+  const hasPos    = barTime >= entryTime && barTime < exitTime;
+
+  // Build a synthetic position snapshot for the capacity block + stop lines
+  const capPos = hasPos ? {
+    side:          _scrubTrade.direction,
+    hard_stop:     _scrubTrade.stop_at_entry,
+    entry_px:      _scrubTrade.entry_price,
+    current_px:    bar.close,
+    size:          _scrubTrade.qty || 0.01,
+    unrealized_pnl: (_scrubTrade.direction === 'LONG'
+      ? bar.close - _scrubTrade.entry_price
+      : _scrubTrade.entry_price - bar.close) * (_scrubTrade.qty || 0.01) * 100,
+  } : null;
+
+  // Update decision tree (uses state OR graceful fallback when no state yet)
+  if (state) {
+    applyState({
+      ...state,
+      dist_to_trigger: state.donchian_high != null
+        ? (state.regime === 'BULL' ? state.donchian_high - state.close : state.close - (state.donchian20_l ?? state.donchian_high))
+        : 0,
+      rule2_triggered: state.donchian_high != null
+        ? (state.regime === 'BULL' ? state.close > state.donchian_high : state.close < (state.donchian20_l ?? state.donchian_high))
+        : false,
+      has_position:  hasPos,
+      position_side: hasPos ? _scrubTrade.direction : null,
+      position_stop: hasPos ? _scrubTrade.stop_at_entry : null,
+    });
+  }
+
+  // Update capacity block + chart stop lines
+  renderPosition(capPos);
+  updatePositionLines(capPos, state || {});
+
+  // Move chart crosshair to current bar
+  try { chart.setCrosshairPosition(bar.close, bar.time, candles); } catch(_) {}
+
+  // Update slider + timestamp + regime badge
+  document.getElementById('scrub-range').value = relIdx;
+  document.getElementById('scrub-ts').textContent =
+    new Date(bar.time * 1000).toLocaleString('en-GB',
+      {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'UTC'}) + ' UTC';
+  const rb = document.getElementById('scrub-rbadge');
+  if (rb && state) {
+    rb.textContent  = state.regime;
+    rb.className    = 'scrub-rbadge ' + (state.regime === 'BULL' ? 'bull' : state.regime === 'BEAR' ? 'bear' : 'neutral');
+  }
+}
+
+// ── Play / Pause ─────────────────────────────────────────────────────────────
+function scrubPlay() {
+  if (_scrubTimer) return;
+  const btn = document.getElementById('scrub-play');
+  if (btn) btn.textContent = '⏸';
+  _scrubTimer = setInterval(() => {
+    const r = document.getElementById('scrub-range');
+    if (!r) { scrubPause(); return; }
+    const next = r.valueAsNumber + 1;
+    if (next > _scrubTo - _scrubFrom) { scrubPause(); return; }
+    scrubGoTo(next);
+  }, 1000);
+}
+
+function scrubPause() {
+  if (_scrubTimer) { clearInterval(_scrubTimer); _scrubTimer = null; }
+  const btn = document.getElementById('scrub-play');
+  if (btn) btn.textContent = '▶';
+}
+
+// ── Event listeners ─────────────────────────────────────────────────────────
+document.getElementById('scrub-select')?.addEventListener('change', e => {
+  _scrubSelectTrade(parseInt(e.target.value));
+});
+document.getElementById('scrub-range')?.addEventListener('input', e => {
+  scrubPause();
+  scrubGoTo(parseInt(e.target.value));
+});
+document.getElementById('scrub-play')?.addEventListener('click', () => {
+  _scrubTimer ? scrubPause() : scrubPlay();
+});
+
 connectWS();
 </script>
 </body>

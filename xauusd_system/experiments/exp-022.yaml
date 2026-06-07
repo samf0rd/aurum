@@ -1,0 +1,36 @@
+---
+id: exp-022
+description: "H1 trend gate — EXP-020 config on 2013-2019 bear market data (cycle durability test)"
+date: 2026-06-07
+profile: intraday
+from: 2013-01-01
+to: 2019-12-31
+research_mode: true
+strategy_overrides:
+  entry_confirmation_bars: 3
+  donchian_entry: 20
+  adx_threshold: 25
+  long_only: true
+  h1_trend_gate: true
+notes: |
+  EXP-016 showed the baseline system loses -$40,543 across 2013-2019 gold bear
+  market. 2013 alone: -$33,623, -34.5% DD. The system cannot survive a secular
+  gold bear without a regime gate.
+
+  This experiment tests whether the H1 200-SMA gate (EXP-020) provides that
+  regime gate naturally, WITHOUT requiring any look-ahead or explicit regime
+  detection.
+
+  Expected mechanism: during 2013's 30% gold crash, price spent the majority
+  of Apr-Dec 2013 BELOW the H1 200-SMA, blocking most long entries. The SMA
+  only lags by ~5-6 trading days (200 hours), so once gold broke structurally
+  below the SMA, the gate would have closed quickly.
+
+  Success criterion: combined 2013-2019 P&L in range -$10k to +$5k
+  (vs EXP-016 baseline of -$40,543).
+
+  If 2013 collapses from -$33k to something like -$5k to -$15k, the H1 gate
+  has real cycle durability and EXP-021 (stacking session filter) becomes a
+  genuine quality improvement on a solid foundation.
+
+  Data: data/cache/XAUUSD_15min_2013-01-01_2019-12-31.json (165,043 bars)

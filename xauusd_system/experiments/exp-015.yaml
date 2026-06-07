@@ -1,0 +1,47 @@
+---
+id: exp-015
+description: "M15-calibrated risk parameters — EXP-010 config without research_mode"
+date: 2026-06-07
+profile: intraday
+from: 2020-01-01
+to: 2025-12-31
+research_mode: false
+strategy_overrides:
+  entry_confirmation_bars: 3
+  donchian_entry: 20
+  adx_threshold: 25
+  long_only: true
+risk_overrides:
+  daily_loss_limit_pct: 0.05
+  weekly_loss_limit_pct: 0.12
+  max_drawdown_pct: 0.40
+  drawdown_resume_pct: 0.20
+  drawdown_cooldown_bars: 96
+  consec_loss_soft_limit: 10
+  consec_loss_hard_limit: 20
+  emergency_daily_loss_pct: 0.08
+  emergency_drawdown_pct: 0.50
+  emergency_consec_losses: 25
+notes: |
+  All prior experiments used research_mode=True (all hard risk gates disabled).
+  EXP-015 applies calibrated M15 risk parameters.
+
+  Rationale for parameter choices:
+  - daily_loss_limit_pct=5%: At 0.5% risk/trade and M15 stop-out frequency,
+    5% daily allows ~10 consecutive losers before halt. H1 used 2%, but M15
+    generates ~4x signal frequency so the daily limit must scale proportionally.
+  - weekly_loss_limit_pct=12%: ~2.4x daily, allowing bad-but-survivable weeks.
+  - max_drawdown_pct=40%: Above the observed 35.5% worst-case DD (EXP-010) so
+    the CB won't fire retroactively. The EXP-005 circular-trap occurred because
+    H1's 15% CB fired mid-drawdown and then prevented re-entry when the big
+    moves arrived. 40% gives the system room to survive 2021-2022.
+  - drawdown_cooldown_bars=96: 1 trading day at M15 (4 bars/hr × 24hr = 96).
+    H1's 20-bar cooldown was ~20 hours; M15's should be equivalent in calendar time.
+  - consec_loss_hard_limit=20: 20 consecutive M15 losses are unlikely given
+    the historical ~33% win rate. Provides a meaningful guard without interfering.
+  - emergency_drawdown_pct=50%: Emergency shutdown only on catastrophic drawdown.
+
+  The key question: with real risk management, how many of the profitable trades
+  (especially the large R winners) get blocked or sized down?
+  The hypothesis: the calibrated limits are loose enough that the big 2023/2025
+  trades fire at full size, but the consec_loss controls cap extreme losing runs.

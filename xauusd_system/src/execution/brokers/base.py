@@ -162,14 +162,14 @@ class PaperBrokerAdapter(IBrokerAdapter):
     def __init__(
         self,
         initial_equity:   Decimal = Decimal("100_000"),
-        fill_price:       Decimal = Decimal("2000.00"),
+        fill_price:       Decimal | None = None,
         slippage_pct:     Decimal = Decimal("0.0001"),  # 1bp slippage
         commission_per_lot: Decimal = Decimal("7.00"),
         reject_next_n:    int = 0,   # for testing: reject next N orders
         fail_next_n:      int = 0,   # for testing: raise BrokerTemporaryError on next N calls
     ) -> None:
         self._equity          = initial_equity
-        self._current_price   = fill_price
+        self._current_price   = fill_price  # None until first on_price() or explicit set
         self._slippage        = slippage_pct
         self._commission      = commission_per_lot
         self._connected       = False
@@ -284,6 +284,11 @@ class PaperBrokerAdapter(IBrokerAdapter):
     # ── Internals ────────────────────────────────────────────────────────────
 
     async def _fill_order(self, order: ExecutionOrder) -> list[Fill]:
+        if self._current_price is None:
+            raise RuntimeError(
+                "PaperBrokerAdapter: cannot fill order — no market price set. "
+                "Call set_current_price() with a real market price before placing orders."
+            )
         slippage_mult = Decimal("1") + (
             self._slippage if order.side == OrderSide.BUY else -self._slippage
         )

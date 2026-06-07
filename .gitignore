@@ -17,3 +17,9 @@ build/
 node_modules/
 *.db
 *.sqlite3
+replay_fixture.json
+/xauusd_system/data/cache/
+aurum.zip
+# Backtest results — commit only the deployment backtest (exp-020)
+/xauusd_system/results/exp-0[0-9][0-9].json
+!/xauusd_system/results/exp-020.json

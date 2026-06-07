@@ -1,0 +1,23 @@
+---
+id: exp-012a
+description: "Walk-forward IN-SAMPLE — EXP-010 config, 2020-2022 training window"
+date: 2026-06-07
+profile: intraday
+from: 2020-01-01
+to: 2022-12-31
+research_mode: true
+strategy_overrides:
+  entry_confirmation_bars: 3
+  donchian_entry: 20
+  adx_threshold: 25
+  long_only: true
+notes: |
+  In-sample half of EXP-010 walk-forward validation.
+  EXP-010 produced PF 1.08 over full 2020-2025 window.
+
+  Oct 2023 LONG (R=+24.14) and Apr 2025 LONG (R=+15.16) are in the OUT-OF-SAMPLE
+  window — these two outliers alone account for $34,978 of the $33,658 total profit.
+  If the in-sample window is profitable WITHOUT those trades, the strategy has
+  genuine out-of-sample edge.
+
+  See exp-012b.yaml for the out-of-sample test window.

@@ -1,0 +1,39 @@
+---
+id: exp-016
+description: "Pre-2020 regime test — EXP-015 production config on 2013-2019 M15 Dukascopy data"
+date: 2026-06-07
+profile: intraday
+from: 2013-01-01
+to: 2019-12-31
+research_mode: true
+strategy_overrides:
+  entry_confirmation_bars: 3
+  donchian_entry: 20
+  adx_threshold: 25
+  long_only: true
+notes: |
+  EXP-014 was INCONCLUSIVE because Twelve Data had no M15 data before 2020.
+  EXP-016 uses Dukascopy M15 data for 2013-2019 (downloaded via dukascopy-node)
+  to run the proper pre-2020 regime test.
+
+  Gold price context 2013-2019:
+  - 2013: Gold crashed from ~$1,700 to ~$1,200 (-30%) — secular bear started
+  - 2014: Range $1,130-$1,380 — choppy with downward bias
+  - 2015: $1,300 → $1,050 lows (Dec 2015 cycle bottom)
+  - 2016: $1,050 → $1,350 (recovery: Brexit spike Jul, then declined)
+  - 2017: Range $1,150-$1,350 — gradual recovery
+  - 2018: $1,360 → $1,180 (USD strength, rate hikes)
+  - 2019: $1,280 → $1,520 (Fed pivot, trade war; June breakout to $1,550+)
+
+  Hypothesis (refined from EXP-013 2024 finding):
+  - 2013-2015: negative (grinding secular bear with no explosive upside)
+  - 2016: potentially positive (Brexit June spike was fast and large)
+  - 2017-2018: negative (slow market, no explosive moves)
+  - 2019: positive (June-Sep gold breakout was fast and large, +$250)
+
+  The key question is MAGNITUDE: does the system lose -$5k/year or -$30k/year
+  in grinding bear years? If losses are manageable (< -15% per year), the
+  strategy has real durability across cycles.
+
+  research_mode=True: all risk gates disabled, same as EXP-010 baseline.
+  This isolates the strategy edge without risk engine interference.

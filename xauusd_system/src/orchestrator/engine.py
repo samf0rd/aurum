@@ -200,32 +200,38 @@ class TradingOrchestrator:
     # ─────────────────────────────────────────────
 
     async def _attempt_entry(self, signal: Signal, bar: Bar) -> None:
-        spread  = self._current_spread()
-        median  = self._median_spread()
+        from risk.models import OrderRequest as _OrderRequest
 
-        approved, reason = self._risk.approve_order(
-            signal, self._risk_state, spread, median
+        is_long   = signal.signal_type == SignalType.ENTER_LONG
+        entry_px  = bar.close
+        stop_px   = entry_px - signal.stop_distance if is_long else entry_px + signal.stop_distance
+
+        req = _OrderRequest(
+            symbol         = SYMBOL,
+            side           = "LONG" if is_long else "SHORT",
+            entry_price    = entry_px,
+            stop_price     = stop_px,
+            atr            = signal.atr,
+            current_spread = self._current_spread(),
+            median_spread  = self._median_spread(),
         )
-        if not approved:
+        decision = self._risk.approve_order(req)
+        if not decision.approved:
+            logger.info(
+                "entry_rejected",
+                extra={"reason": decision.rejection_reason, "detail": decision.rejection_detail},
+            )
             return
 
-        qty = self._risk.compute_position_size(signal, self._risk_state)
-
-        if signal.signal_type == SignalType.ENTER_LONG:
-            side      = Side.LONG
-            stop_price = bar.close - signal.stop_distance
-        else:
-            side      = Side.SHORT
-            stop_price = bar.close + signal.stop_distance
-
+        side = Side.LONG if is_long else Side.SHORT
         entry_order = Order(
             symbol     = SYMBOL,
             side       = side,
             order_type = OrderType.MARKET,
-            quantity   = qty,
+            quantity   = decision.quantity,
             metadata   = {
                 "signal_reason": signal.reason,
-                "stop_price":    float(stop_price),
+                "stop_price":    float(stop_px),
                 "type":          "entry",
             },
         )
@@ -372,7 +378,7 @@ class TradingOrchestrator:
     async def _daily_reset_loop(self) -> None:
         """Fires at 00:05 UTC each day. Resets daily P&L counters."""
         while True:
-            now        = datetime.utcnow()
+            now        = datetime.now(timezone.utc)
             next_reset = now.replace(hour=0, minute=5, second=0, microsecond=0)
             if next_reset <= now:
                 next_reset += timedelta(days=1)
@@ -520,120 +526,3 @@ class TradingOrchestrator:
         else:
             return (entry - mid_price) * qty * 100.0
 
-
-# ──────────────────────────────────────────────────────────────────
-# broker/oanda_adapter.py  (stub — replace with live credentials)
-# ──────────────────────────────────────────────────────────────────
-
-"""
-broker/oanda_adapter.py
-────────────────────────
-OANDA v20 REST + streaming adapter.
-This is the ONLY class with knowledge of broker-specific API details.
-To switch brokers, implement IBrokerAdapter for the new broker and
-inject it — zero changes elsewhere.
-"""
-
-import aiohttp
-from typing import AsyncIterator
-
-
-class OandaBrokerAdapter(IBrokerAdapter):
-    """
-    Production adapter for OANDA v20 API.
-    Credentials loaded from environment — never hardcoded.
-    """
-
-    BASE_URL    = "https://api-fxtrade.oanda.com/v3"
-    STREAM_URL  = "https://stream-fxtrade.oanda.com/v3"
-
-    def __init__(self, account_id: str, api_token: str) -> None:
-        self._account_id = account_id
-        self._headers    = {
-            "Authorization": f"Bearer {api_token}",
-            "Content-Type":  "application/json",
-        }
-        self._session: Optional[aiohttp.ClientSession] = None
-
-    async def _get_session(self) -> aiohttp.ClientSession:
-        if self._session is None or self._session.closed:
-            self._session = aiohttp.ClientSession(headers=self._headers)
-        return self._session
-
-    async def place_order(self, order: Order) -> Order:
-        session = await self._get_session()
-        payload = self._translate_order(order)
-        url = f"{self.BASE_URL}/accounts/{self._account_id}/orders"
-        async with session.post(url, json=payload) as resp:
-            data = await resp.json()
-            if resp.status == 201:
-                order.broker_ref = data.get("orderCreateTransaction", {}).get("id", "")
-                order.status     = type('OrderStatus', (), {'SUBMITTED': None})  # from enum
-                logger.info("order_placed", extra={"broker_ref": order.broker_ref})
-            else:
-                logger.error("order_place_failed", extra={"response": data})
-                raise RuntimeError(f"OANDA order failed: {data}")
-        return order
-
-    async def cancel_order(self, broker_ref: str) -> bool:
-        session = await self._get_session()
-        url = f"{self.BASE_URL}/accounts/{self._account_id}/orders/{broker_ref}/cancel"
-        async with session.put(url) as resp:
-            return resp.status == 200
-
-    async def get_account(self) -> dict:
-        session = await self._get_session()
-        url = f"{self.BASE_URL}/accounts/{self._account_id}/summary"
-        async with session.get(url) as resp:
-            return await resp.json()
-
-    async def stream_executions(self) -> AsyncIterator[Order]:
-        """Stream transaction events from OANDA."""
-        session = await self._get_session()
-        url = f"{self.STREAM_URL}/accounts/{self._account_id}/transactions/stream"
-        async with session.get(url) as resp:
-            async for line in resp.content:
-                if line.strip():
-                    import json
-                    event = json.loads(line)
-                    parsed = self._parse_transaction(event)
-                    if parsed:
-                        yield parsed
-
-    async def healthcheck(self) -> bool:
-        try:
-            session = await self._get_session()
-            url = f"{self.BASE_URL}/accounts/{self._account_id}/summary"
-            async with session.get(url) as resp:
-                return resp.status == 200
-        except Exception:
-            return False
-
-    def _translate_order(self, order: Order) -> dict:
-        """Domain Order → OANDA JSON payload."""
-        units = float(order.quantity) * (1 if order.side == Side.LONG else -1)
-        base = {
-            "order": {
-                "instrument": "XAU_USD",
-                "units": str(units),
-            }
-        }
-        if order.order_type == OrderType.MARKET:
-            base["order"]["type"] = "MARKET"
-            if order.stop_price:
-                base["order"]["stopLossOnFill"] = {
-                    "price": str(order.stop_price),
-                    "timeInForce": "GTC",
-                }
-        elif order.order_type == OrderType.STOP_MARKET:
-            base["order"]["type"] = "STOP"
-            base["order"]["price"] = str(order.stop_price)
-        return base
-
-    def _parse_transaction(self, event: dict) -> Optional[Order]:
-        """Convert OANDA transaction event → our Order domain object."""
-        tx_type = event.get("type", "")
-        if tx_type not in ("ORDER_FILL", "ORDER_CANCEL", "ORDER_REJECT"):
-            return None
-        # Minimal mapping — extend as needed for full execution tracking
-        return None  # placeholder; production code maps all fields

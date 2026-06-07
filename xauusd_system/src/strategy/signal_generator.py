@@ -14,6 +14,7 @@ Key design decisions:
 
 from __future__ import annotations
 
+from collections import deque
 from decimal import Decimal
 from datetime import datetime
 from typing import Sequence
@@ -151,6 +152,35 @@ def _atr_series(bars: Sequence[Bar], period: int = 14) -> np.ndarray:
     return result
 
 
+def atr_above_median(bars: Sequence[Bar], lookback: int = 2016) -> bool:
+    """
+    Returns True when the current ATR/Close ratio is above its N-bar median.
+    Used as a volatility FLOOR filter: only trade in "hot" periods.
+
+    lookback = number of bars to compute the ATR/Close median over.
+    A bar whose ATR/Close is below the rolling median is a "grinding" bar.
+    """
+    if len(bars) < lookback + 16:
+        return True  # insufficient history → don't block
+
+    atr_vals = _atr_series(bars, 14)
+    if len(atr_vals) < lookback + 1:
+        return True
+
+    closes = _closes(bars)
+    # Last lookback bars of the ATR/Close series (excluding current bar)
+    atr_hist   = atr_vals[-lookback - 1:-1]
+    close_hist = closes[-lookback - 1:-1]
+    hist_ratios = np.where(close_hist > 0, atr_hist / close_hist, 0.0)
+
+    today_atr   = atr_vals[-1]
+    today_close = float(bars[-1].close)
+    today_ratio = today_atr / today_close if today_close > 0 else 0.0
+
+    median = float(np.median(hist_ratios))
+    return today_ratio >= median if median > 0 else True
+
+
 def vol_ratio(bars: Sequence[Bar], lookback: int = 100) -> float:
     """
     Rule 1c: current ATR/Close ratio vs its 100-day median.
@@ -244,7 +274,11 @@ class DonchianBreakoutSignalGenerator(ISignalGenerator):
         Regime.TRENDING_BEAR,
     }
 
-    def __init__(self, profile: StrategyProfile | None = None) -> None:
+    def __init__(
+        self,
+        profile: StrategyProfile | None = None,
+        h1_sma_lookup: dict | None = None,
+    ) -> None:
         _p = profile if profile is not None else ACTIVE_PROFILE
         self.ENTRY_PERIOD       = _p.donchian_entry
         self.EXIT_PERIOD        = _p.donchian_exit
@@ -253,6 +287,21 @@ class DonchianBreakoutSignalGenerator(ISignalGenerator):
         self.ATR_STOP_MULT      = Decimal(str(_p.atr_stop_mult))
         self._confirmation_bars = _p.entry_confirmation_bars
         self._long_only         = _p.long_only
+        self._atr_vol_filter    = _p.atr_vol_filter
+        self._atr_vol_lookback  = _p.atr_vol_lookback
+        # Full bar history for the ATR vol floor filter. The engine's MAX_WINDOW
+        # (500 bars) is far smaller than the 12096-bar lookback, so we maintain a
+        # separate deque fed by accumulate() on every bar rather than relying on
+        # the truncated window passed to on_bar().
+        self._vol_history: deque[Bar] | None = (
+            deque(maxlen=_p.atr_vol_lookback + 20) if _p.atr_vol_filter else None
+        )
+        self._vol_ratio_floor   = _p.vol_ratio_floor
+        self._session_filter    = _p.session_filter
+        self._h1_trend_gate     = _p.h1_trend_gate
+        # Pre-computed H1 200-SMA lookup: timestamp ISO string → sma value.
+        # None means the gate is open for all bars (e.g., warmup period).
+        self._h1_sma_lookup: dict | None = h1_sma_lookup
 
     def compute_indicators(self, bars: Sequence[Bar]) -> dict:
         closes = _closes(bars)
@@ -268,6 +317,11 @@ class DonchianBreakoutSignalGenerator(ISignalGenerator):
             "close":        float(bars[-1].close),
         }
 
+    def accumulate(self, bar: Bar) -> None:
+        """Feed every bar into the internal ATR vol history, regardless of position state."""
+        if self._vol_history is not None:
+            self._vol_history.append(bar)
+
     def on_bar(self, bars: Sequence[Bar], regime: Regime) -> Signal:
         """
         Evaluates the last completed bar.
@@ -281,6 +335,27 @@ class DonchianBreakoutSignalGenerator(ISignalGenerator):
 
         if self._long_only and regime == Regime.TRENDING_BEAR:
             return self._no_signal(bars, regime, "long_only: bear signals suppressed")
+
+        if self._atr_vol_filter:
+            hist = list(self._vol_history) if self._vol_history is not None else list(bars)
+            if not atr_above_median(hist, self._atr_vol_lookback):
+                return self._no_signal(bars, regime, "atr_vol_filter: below median ATR")
+
+        if self._vol_ratio_floor > 0.0:
+            vr = vol_ratio(bars)
+            if vr < self._vol_ratio_floor:
+                return self._no_signal(bars, regime, f"vol_ratio_floor: {vr:.2f} < {self._vol_ratio_floor}")
+
+        if self._session_filter:
+            h = bars[-1].timestamp.hour
+            if not (8 <= h < 12 or 13 <= h < 17):
+                return self._no_signal(bars, regime, f"session_filter: hour={h}UTC outside London/NY")
+
+        if self._h1_trend_gate and self._h1_sma_lookup is not None:
+            ts_key = bars[-1].timestamp.isoformat()
+            h1_sma = self._h1_sma_lookup.get(ts_key)
+            if h1_sma is not None and float(bars[-1].close) < h1_sma:
+                return self._no_signal(bars, regime, f"h1_trend_gate: close={float(bars[-1].close):.2f} < H1_SMA200={h1_sma:.2f}")
 
         ind    = self.compute_indicators(bars)
         last   = bars[-1]

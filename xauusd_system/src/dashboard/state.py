@@ -1,6 +1,7 @@
 from __future__ import annotations
 import json, math, time
 from dataclasses import dataclass
+from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, Optional
@@ -64,26 +65,78 @@ class SystemState:
         self.regime = regime; self.adx = adx
 
     def get_stats(self) -> dict[str, Any]:
-        eq = [e for _, e in self.equity_curve]
+        eq     = [e for _, e in self.equity_curve]
         closed = [t for t in self.trades if t.pnl is not None]
-        if len(eq) < 2:
-            return {"sharpe": 0, "max_drawdown": 0, "win_rate": 0,
-                    "total_trades": 0, "total_pnl": 0,
-                    "uptime_s": round(time.time() - self.started_at)}
-        rets = [eq[i]/eq[i-1]-1 for i in range(1, len(eq))]
-        mu = sum(rets)/len(rets)
-        var = sum((r-mu)**2 for r in rets)/max(len(rets)-1, 1)
-        sharpe = (mu/math.sqrt(var)*math.sqrt(252)) if var > 0 else 0
-        peak = eq[0]; mdd = 0.0
+
+        # Max drawdown from equity curve
+        peak = eq[0] if eq else float(self.initial_equity)
+        mdd  = 0.0
         for e in eq:
-            if e > peak: peak = e
-            mdd = max(mdd, (peak-e)/peak)
-        wins = sum(1 for t in closed if (t.pnl or 0) > 0)
+            if e > peak:
+                peak = e
+            mdd = max(mdd, (peak - e) / peak if peak > 0 else 0.0)
+
+        current_equity = eq[-1] if eq else float(self.initial_equity)
+        current_dd_pct = round(max(0.0, (peak - current_equity) / peak) * 100, 2) if peak > 0 else 0.0
+
+        wins       = [t for t in closed if (t.pnl or 0) > 0]
+        losses     = [t for t in closed if (t.pnl or 0) < 0]
+        gross_win  = sum(t.pnl for t in wins)
+        gross_loss = abs(sum(t.pnl for t in losses))
+        n          = len(closed)
+
+        profit_factor  = round(gross_win / gross_loss, 3) if gross_loss > 0 else None
+        expectancy_usd = round(sum(t.pnl for t in closed) / n, 2) if n > 0 else None
+
+        # Sharpe — only meaningful at n ≥ 100 trades; annualise per trade-frequency
+        # (not per equity-point which gives spurious precision on small samples)
+        sharpe = None
+        if n >= 100:
+            pnls = [t.pnl for t in closed]
+            mu_pnl  = sum(pnls) / n
+            var_pnl = sum((p - mu_pnl) ** 2 for p in pnls) / (n - 1)
+            if var_pnl > 0:
+                sharpe = round(mu_pnl / math.sqrt(var_pnl) * math.sqrt(n), 3)
+
+        today_start = datetime.now(timezone.utc).replace(
+            hour=0, minute=0, second=0, microsecond=0)
+        week_start = today_start - timedelta(days=today_start.weekday())
+        daily_pnl = weekly_pnl = 0.0
+        for t in closed:
+            if t.closed_at:
+                try:
+                    ct = datetime.fromisoformat(t.closed_at.replace("Z", "+00:00"))
+                    if ct.tzinfo is None:
+                        ct = ct.replace(tzinfo=timezone.utc)
+                    pnl = t.pnl or 0.0
+                    if ct >= today_start:
+                        daily_pnl  += pnl
+                    if ct >= week_start:
+                        weekly_pnl += pnl
+                except (ValueError, AttributeError):
+                    pass
+
         return {
-            "sharpe": round(sharpe, 3),
-            "max_drawdown": round(mdd*100, 2),
-            "win_rate": round(wins/len(closed)*100, 1) if closed else 0,
-            "total_trades": len(closed),
-            "total_pnl": round(sum(t.pnl or 0 for t in closed), 2),
-            "uptime_s": round(time.time() - self.started_at),
+            # Primary metrics — profit factor and expectancy are honest for
+            # a low-win-rate trend follower; never show Sharpe at n < 100
+            "profit_factor":       profit_factor,
+            "expectancy_usd":      expectancy_usd,
+            "win_rate":            round(len(wins) / n * 100, 1) if n > 0 else 0,
+            "n_trades":            n,
+            "n_wins":              len(wins),
+            "n_losses":            len(losses),
+            "total_pnl":           round(sum(t.pnl or 0 for t in closed), 2),
+            "gross_win":           round(gross_win, 2),
+            "gross_loss":          round(gross_loss, 2),
+            # Sharpe shown only at n ≥ 100; None means "insufficient sample"
+            "sharpe":              sharpe,
+            "sharpe_sample_note":  f"n={n}" if n < 100 else None,
+            "max_drawdown":        round(mdd * 100, 2),
+            "current_drawdown_pct": current_dd_pct,
+            "peak_equity":         round(peak, 2),
+            "current_equity":      round(current_equity, 2),
+            "daily_pnl":           round(daily_pnl, 2),
+            "weekly_pnl":          round(weekly_pnl, 2),
+            "uptime_s":            round(time.time() - self.started_at),
+            "data_source":         "live_paper",
         }

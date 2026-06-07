@@ -1,0 +1,29 @@
+---
+id: exp-007
+description: "M15 higher confirmation — entry_confirmation_bars=3 to filter false breakouts (research mode)"
+date: 2026-06-07
+profile: intraday
+from: 2020-01-01
+to: 2025-12-31
+research_mode: true
+strategy_overrides:
+  entry_confirmation_bars: 3
+  donchian_entry: 20
+  adx_threshold: 25
+notes: |
+  EXP-006 showed 79.2% false breakout rate: 1595/2015 entries reversed on bar+1.
+  The 420 "held" entries had 54.3% win rate and +0.54 Avg R — clearly profitable.
+  The 1595 reverted entries had 22.6% win rate and -0.25 Avg R — structural losers.
+
+  Hypothesis: forcing 3 confirmation bars (45 minutes) before entry triggers
+  should dramatically increase the "held" proportion by requiring the market to
+  prove the breakout is real before committing capital.
+
+  Expected result: significantly fewer trades (400-800 vs 2015) but PF > 1.0.
+  The cost is worse fill price on real moves.
+
+  Diagnostic questions:
+  1. Does PF exceed 1.0?
+  2. Does the 4–8 bar zero-win zone shrink or disappear?
+  3. What is the new false-breakout rate? (bar+1 reversion after 3-bar hold)
+  4. What happens to the TRENDING_BULL vs TRENDING_BEAR gap?

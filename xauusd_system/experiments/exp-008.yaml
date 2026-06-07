@@ -1,0 +1,23 @@
+---
+id: exp-008
+description: "M15 wider Donchian — donchian_entry=40 (10-hour channel) to test breakout quality (research mode)"
+date: 2026-06-07
+profile: intraday
+from: 2020-01-01
+to: 2025-12-31
+research_mode: true
+strategy_overrides:
+  entry_confirmation_bars: 1
+  donchian_entry: 40
+  adx_threshold: 25
+notes: |
+  EXP-006 showed that 85% of Donchian-20 breakouts fail within 8 bars.
+  Hypothesis: a 40-bar (10-hour) channel represents a stronger structural break —
+  the market has been range-bound longer, and genuine breakouts are more likely
+  to sustain past the 25-bar threshold that EXP-006 identified as the profitable zone.
+
+  Expected result: fewer total trades (halved from 2015), but higher proportion
+  of 25+ bar winners and significantly better PF.
+
+  Run after EXP-007 to understand whether confirmation delay OR breakout strength
+  (or both) is the primary edge lever.

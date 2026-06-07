@@ -1,0 +1,42 @@
+---
+id: exp-017
+description: "ATR volatility floor filter — EXP-015 config + only trade when ATR above 21-day median"
+date: 2026-06-07
+profile: intraday
+from: 2020-01-01
+to: 2025-12-31
+research_mode: true
+strategy_overrides:
+  entry_confirmation_bars: 3
+  donchian_entry: 20
+  adx_threshold: 25
+  long_only: true
+  atr_vol_filter: true
+  atr_vol_lookback: 12096
+notes: |
+  EXP-013 revealed that 2024 (gold +27% gradual grind) was -$17,318 while
+  2025 (explosive ATH breakout) was +$43,915. The difference is volatility
+  regime: gradual appreciation produces many failed breakouts, explosive moves
+  produce fewer but higher-quality entries.
+
+  Hypothesis: an ATR volatility floor filter — only trade when current
+  ATR/Close is above its rolling median — can gate the system into the explosive
+  periods and out of the grinding periods.
+
+  Implementation:
+  - atr_vol_filter=True: gates entries behind atr_above_median() check
+  - atr_vol_lookback=12096: median computed over last 12096 M15 bars
+    = ~126 trading days × 96 bars = ~6 months of M15 data (per user spec)
+  - Filter is a FLOOR: only enter when current ATR/Close >= rolling median
+  - Exits are NOT filtered — once in a position, normal exit rules apply
+
+  This is tested on research_mode=True (same as EXP-010 baseline) so
+  the only change vs EXP-010 is the addition of the ATR floor filter.
+
+  Expected: fewer total trades, higher per-trade PF, but net P&L depends on
+  whether the filter correctly excludes 2024's grinding losses while
+  keeping 2025's explosive wins. Key test: does 2024 improve and does
+  2025 remain intact?
+
+  Secondary question: does the strip-top-3 PF improve? If the filter
+  gates out grinding trades, the base distribution quality should improve.

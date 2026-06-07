@@ -1,0 +1,91 @@
+{
+  "validated": false,
+  "generated": "2026-06-06T17:18:30.538258+00:00",
+  "profile": "Swing (H1)",
+  "date_range": {
+    "start": "2024-06-06",
+    "end": "2025-12-31"
+  },
+  "in_sample": {
+    "n_trades": 85,
+    "profit_factor": 0.467,
+    "expectancy_usd": -171.92,
+    "win_rate": 0.1882,
+    "max_drawdown": 0.1505,
+    "gross_win": 12801.94,
+    "gross_loss": 27415.19
+  },
+  "gates": {
+    "walk_forward": {
+      "passed": false,
+      "avg_pf": 0.627,
+      "oos_trades": 43,
+      "pf_gate": 1.2,
+      "trade_gate": 20,
+      "splits": [
+        {
+          "split": 0,
+          "n_trades": 9,
+          "profit_factor": 0.4110858224737658,
+          "win_rate": 0.2222222222222222,
+          "max_drawdown": 0.024667605182257805,
+          "net_pnl": -1754.3400000000001
+        },
+        {
+          "split": 1,
+          "n_trades": 10,
+          "profit_factor": 1.4820539520354041,
+          "win_rate": 0.4,
+          "max_drawdown": 0.019043699999999955,
+          "net_pnl": 1925.82
+        },
+        {
+          "split": 2,
+          "n_trades": 15,
+          "profit_factor": 0.2827797129952166,
+          "win_rate": 0.26666666666666666,
+          "max_drawdown": 0.0430325,
+          "net_pnl": -4303.25
+        },
+        {
+          "split": 3,
+          "n_trades": 9,
+          "profit_factor": 0.33271145598913,
+          "win_rate": 0.2222222222222222,
+          "max_drawdown": 0.03267199999999997,
+          "net_pnl": -2514.45
+        }
+      ]
+    },
+    "cost_stress": {
+      "passed": false,
+      "pf_gate_at_2x": 1.0,
+      "runs": {
+        "1.0x": {
+          "n_trades": 85,
+          "profit_factor": 0.467,
+          "max_drawdown": 0.1505
+        },
+        "1.5x": {
+          "n_trades": 83,
+          "profit_factor": 0.454,
+          "max_drawdown": 0.1528
+        },
+        "2.0x": {
+          "n_trades": 73,
+          "profit_factor": 0.425,
+          "max_drawdown": 0.1515
+        }
+      }
+    },
+    "monte_carlo": {
+      "passed": true,
+      "p_exceed_limit": 0.0,
+      "p_exceed_gate": 0.05,
+      "dd_limit": 0.25,
+      "p95_drawdown": 0.1811,
+      "median_drawdown": 0.1557,
+      "n_samples": 500
+    }
+  }
+}

@@ -1,0 +1,23 @@
+---
+id: exp-012b
+description: "Walk-forward OUT-OF-SAMPLE — EXP-010 config, 2023-2025 test window"
+date: 2026-06-07
+profile: intraday
+from: 2023-01-01
+to: 2025-12-31
+research_mode: true
+strategy_overrides:
+  entry_confirmation_bars: 3
+  donchian_entry: 20
+  adx_threshold: 25
+  long_only: true
+notes: |
+  Out-of-sample half of EXP-010 walk-forward validation.
+  Parameters fixed from EXP-010 (in-sample best config).
+
+  This window contains: Oct 2023 LONG (R=+24.14, gold spike +$10%) and
+  Apr 2025 LONG (R=+15.16, gold ATH push). These two trades alone = $34,978.
+  If the OOS window shows PF > 1.0, the strategy has real forward edge.
+  If the OOS window only profits from those two outliers, the edge is fragile.
+
+  See exp-012a.yaml for the in-sample training window.

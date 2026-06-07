@@ -1,0 +1,22 @@
+---
+id: exp-009
+description: "M15 combined levers — confirmation=3 + donchian=40 (research mode)"
+date: 2026-06-07
+profile: intraday
+from: 2020-01-01
+to: 2025-12-31
+research_mode: true
+strategy_overrides:
+  entry_confirmation_bars: 3
+  donchian_entry: 40
+  adx_threshold: 25
+notes: |
+  Combines both edge levers identified in EXP-007 and EXP-008:
+  - EXP-007: confirmation=3 pushed TRENDING_BULL to PF 1.06 (overall PF 0.90)
+  - EXP-008: donchian=40 tests whether wider channel reduces false-breakout rate
+
+  Hypothesis: stacking both filters should further reduce the 77% false-breakout
+  penalty and push overall PF above 1.0, with TRENDING_BULL potentially reaching 1.2+.
+
+  Run only if EXP-008 shows structural improvement vs EXP-006 in the duration
+  distribution or false-breakout rate.

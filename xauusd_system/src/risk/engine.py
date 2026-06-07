@@ -99,16 +99,19 @@ class RiskEngine:
     # Primary API
     # ──────────────────────────────────────────────────────────────────────
 
-    def approve_order(self, req: OrderRequest) -> OrderDecision:
+    def approve_order(self, req: OrderRequest, bar_date: Optional[date] = None) -> OrderDecision:
         """
         Gate all risk controls before allowing a new order.
 
         Returns OrderDecision with:
           - approved=True  → quantity to trade
           - approved=False → rejection_reason + zero quantity
+
+        bar_date: pass the bar's date in backtest mode so daily/weekly windows
+                  roll on bar time rather than wall-clock time.
         """
         # ── 1. Auto-roll daily/weekly windows if date changed ──────────────
-        self._maybe_roll_windows()
+        self._maybe_roll_windows(force_date=bar_date)
 
         # ── 2. Hard gates (engine state) ──────────────────────────────────
         gate_result = self._check_hard_gates()
@@ -278,6 +281,85 @@ class RiskEngine:
     def record_trade_result(self, pnl: Decimal) -> None:
         """Convenience alias when you only have a scalar P&L."""
         self.record_position_closed(realized_pnl=pnl)
+
+    def record_fill(self, fill) -> None:
+        """IRiskEngine.record_fill — notify the engine a trade closed."""
+        try:
+            pnl = Decimal(str(getattr(fill, "realized_pnl", 0)))
+            self.record_position_closed(realized_pnl=pnl)
+        except (ValueError, TypeError) as exc:
+            logger.warning("record_fill: could not parse pnl from fill: %s", exc)
+
+    def update_risk_state(
+        self,
+        current_state,   # core.interfaces.RiskState
+        realized_pnl: Decimal,
+        open_positions: list,
+        current_prices: dict,
+    ):
+        """
+        IRiskEngine.update_risk_state — sync internal state and return a
+        fresh RiskState snapshot for the orchestrator's dashboard logic.
+        realized_pnl of 0 means fills flow through record_fill; non-zero
+        means the caller is providing a correction.
+        """
+        from core.interfaces import RiskState
+        if realized_pnl != Decimal("0"):
+            self.record_position_closed(realized_pnl=realized_pnl)
+
+        snap = self._snapshot(RejectionReason.OK, "")
+        return RiskState(
+            equity             = snap.equity,
+            peak_equity        = snap.peak_equity,
+            daily_pnl          = snap.daily_pnl,
+            weekly_pnl         = snap.weekly_pnl,
+            drawdown_pct       = snap.drawdown_pct,
+            daily_limit_hit    = self._state == EngineState.DAILY_HALTED,
+            weekly_limit_hit   = self._state == EngineState.WEEKLY_HALTED,
+            circuit_breaker_on = self._state == EngineState.DRAWDOWN_HALT,
+            gap_caution        = self._sizing_mode == SizingMode.REDUCED,
+        )
+
+    def update_trailing_stop(self, position, bars) -> object:
+        """
+        IRiskEngine.update_trailing_stop — ratchet hard_stop to the
+        Donchian-10 trailing level, never loosening the stop.
+
+        For LONG:  new_stop = max(position.hard_stop, donchian10_low)
+        For SHORT: new_stop = min(position.hard_stop, donchian10_high)
+        """
+        from core.interfaces import Side
+        period = 10
+        if len(bars) < period + 1:
+            return position
+
+        # Donchian-10: use bars excluding the current bar (completed-bar data)
+        recent = bars[-(period + 1):-1]   # last `period` completed bars
+        highs = [float(b.high) for b in recent]
+        lows  = [float(b.low)  for b in recent]
+
+        side = position.side if hasattr(position.side, "value") else None
+        current_stop = position.hard_stop
+
+        from dataclasses import replace
+        if side == Side.LONG or (hasattr(side, "name") and side.name == "LONG"):
+            d10_low  = Decimal(str(min(lows)))
+            new_stop = max(current_stop, d10_low)
+            if new_stop != current_stop:
+                logger.debug(
+                    "trailing_stop_ratchet | LONG | old=%s new=%s",
+                    current_stop, new_stop,
+                )
+            return replace(position, hard_stop=new_stop)
+        else:
+            d10_high = Decimal(str(max(highs)))
+            new_stop = min(current_stop, d10_high)
+            if new_stop != current_stop:
+                logger.debug(
+                    "trailing_stop_ratchet | SHORT | old=%s new=%s",
+                    current_stop, new_stop,
+                )
+            return replace(position, hard_stop=new_stop)
 
     # ──────────────────────────────────────────────────────────────────────
     # Emergency controls
@@ -556,6 +638,18 @@ class RiskEngine:
                 if self._state == EngineState.WEEKLY_HALTED:
                     self._state = EngineState.ACTIVE
                     logger.info("weekly_halt_lifted | new week %d", iso_week)
+                # Auto-lift consecutive-loss halt at weekly boundary — simulates
+                # operator restart on Monday after reviewing a bad streak.
+                if self._consec.losses_in_row >= self._config.consec_loss_hard_limit:
+                    self._consec.losses_in_row  = 0
+                    self._consec.wins_in_row    = 0
+                    self._consec.current_streak = 0
+                    self._sizing_mode           = SizingMode.REDUCED
+                    logger.info(
+                        "consec_loss_halt_lifted | weekly session reset | "
+                        "sizing=REDUCED until %d consecutive wins",
+                        self._config.consec_loss_reset_wins,
+                    )
             self._pnl.weekly_realized = Decimal("0")
             self._pnl.weekly_open     = Decimal("0")
             self._current_week        = iso_week

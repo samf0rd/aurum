@@ -1,0 +1,38 @@
+---
+id: exp-021
+description: "Combined H1 trend gate + session filter — EXP-020 + EXP-019 stacked on 2020-2025"
+date: 2026-06-07
+profile: intraday
+from: 2020-01-01
+to: 2025-12-31
+research_mode: true
+strategy_overrides:
+  entry_confirmation_bars: 3
+  donchian_entry: 20
+  adx_threshold: 25
+  long_only: true
+  h1_trend_gate: true
+  session_filter: true
+notes: |
+  Stacks EXP-019 (session filter) on top of EXP-020 (H1 trend gate).
+
+  Rationale: session filter improved 2021 (+$10k) and 2022 (+$19k) vs baseline
+  by blocking Asian-session noise breakouts. But it also damaged 2020 (-$20k)
+  and 2025 (~-$30k) by blocking entries during macro events. EXP-020's H1 gate
+  may have already removed many of the bad 2020/2025 entries, so the session
+  filter's damage might be less severe on this cleaner entry set.
+
+  CRITICAL WATCH: trade count. EXP-020 had 763 trades. Session filter on
+  EXP-010 retained 52% (490/936). Projected EXP-021 trades: ~397. If count
+  falls below 350, PF estimate carries too much sampling variance to trust and
+  the experiment is statistically inconclusive.
+
+  Key questions:
+  1. Does trade count stay above 350?
+  2. Does strip-top-3 PF cross 1.0?
+  3. Does 2025 survive? (April 2025 ATH — did that entry fire in London/NY hours?)
+  4. Does 2021 improve vs EXP-020's -$16,217? (This was the EXP-020 weakness)
+
+  Only run EXP-021 combination if EXP-022 shows the H1 gate survives the
+  2013-2019 bear cycle — otherwise we are stacking filters on a structurally
+  broken foundation.
