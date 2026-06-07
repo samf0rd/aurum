@@ -169,7 +169,7 @@
   .chart-title span{color:var(--ink-faint);font-weight:500;margin-left:8px}
   .legend{display:flex;gap:14px;font-size:10.5px;color:var(--ink-dim)}
   .legend i{display:inline-block;width:14px;height:2px;border-radius:2px;margin-right:5px;vertical-align:middle}
-  #chart{flex:1;width:100%;min-height:420px}
+  #chart{flex:1;width:100%;min-height:420px;position:relative}
   .equity-strip{border-top:1px solid var(--line-soft);padding:10px 16px 12px}
   .equity-strip .lbl{font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-faint);display:flex;justify-content:space-between;margin-bottom:6px}
   #equity{width:100%;height:60px}
@@ -547,20 +547,31 @@
         <div class="card-h row"><span>Trade History</span><span class="faint">0 shown</span></div>
         <div class="trades"><div class="trades-empty">No closed trades yet</div></div>
       </div>
+
+      <!-- Year-by-year breakdown — shown in REPLAY mode only -->
+      <div class="card" id="yearly-card" style="display:none">
+        <div class="card-h">Year-by-Year Performance</div>
+        <div id="yearly-table" style="font-family:var(--mono);font-size:12px"></div>
+      </div>
     </div>
 
     <!-- RIGHT: M15 chart -->
     <div class="col col-chart">
       <div class="card chart-card">
         <div class="chart-head">
-          <div class="chart-title">XAU/USD · M15 <span>Donchian Breakout</span></div>
-          <div class="legend">
+          <div class="chart-title" id="chart-title">XAU/USD · M15 <span>Donchian Breakout</span></div>
+          <div class="legend" id="chart-legend">
             <span><i style="background:var(--gold)"></i>SMA 200</span>
             <span><i style="background:var(--blue)"></i>Donchian 20</span>
             <span><i style="background:var(--ink-faint)"></i>Trailing stop</span>
           </div>
         </div>
-        <div id="chart"></div>
+        <div style="position:relative;flex:1;display:flex;flex-direction:column;min-height:0">
+          <div id="chart" style="flex:1;min-height:0"></div>
+          <div id="chart-no-data" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;flex-direction:column;gap:8px;pointer-events:none">
+            <div style="color:var(--ink-faint);font-size:13px;text-align:center">No live bar data<br><span style="font-size:11px;opacity:.6">Set TWELVE_DATA_API_KEY in .env to load the candlestick chart</span></div>
+          </div>
+        </div>
         <!-- WP-8 regime strip — thin colored bar shading BULL/BEAR/CHOPPY -->
         <div id="regime-strip"></div>
         <div class="equity-strip">
@@ -807,9 +818,11 @@ function setTab(tab) {
 
   const termEl  = document.getElementById('view-terminal');
   const stratEl = document.getElementById('view-strategy');
+  const refEl   = document.getElementById('view-reference');
   const sbEl    = document.getElementById('statusbar');
   if (termEl)  termEl.style.display  = isStrategy ? 'none' : '';
   if (stratEl) stratEl.style.display = isStrategy ? ''     : 'none';
+  if (refEl)   refEl.style.display   = isStrategy ? ''     : 'none';
   if (sbEl)    sbEl.style.display    = isStrategy ? 'none' : '';
 
   if (isStrategy) {
@@ -1306,6 +1319,77 @@ function renderMetrics(m, isReplay) {
   if (elTrS) elTrS.textContent = isReplay ? 'backtest trades' : 'since inception';
 }
 
+// ── Year-by-year P&L breakdown ───────────────────────────────────────────────
+function renderYearByYear(trades) {
+  const card = document.getElementById('yearly-card');
+  const tbl  = document.getElementById('yearly-table');
+  if (!card || !tbl || !trades || !trades.length) return;
+
+  // Group PnL and trade count by year of exit
+  const byYear = {};
+  for (const t of trades) {
+    const yr = new Date(t.exit_time || t.entry_time).getUTCFullYear();
+    if (!byYear[yr]) byYear[yr] = { pnl: 0, n: 0, wins: 0 };
+    byYear[yr].pnl  += t.pnl || 0;
+    byYear[yr].n    += 1;
+    if ((t.pnl || 0) > 0) byYear[yr].wins += 1;
+  }
+  const years = Object.keys(byYear).sort();
+  let totalPnl = 0;
+  const rows = years.map(yr => {
+    const d    = byYear[yr];
+    totalPnl  += d.pnl;
+    const pos  = d.pnl >= 0;
+    const sign = pos ? '+' : '−';
+    const cls  = pos ? 'pos' : 'neg';
+    const wr   = d.n > 0 ? Math.round(d.wins / d.n * 100) : 0;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--line-soft)">
+      <span style="color:var(--ink-faint)">${yr}</span>
+      <span style="color:var(--ink-faint);font-size:11px">${d.n} trades · ${wr}% WR</span>
+      <span class="val ${cls}" style="font-size:13px;font-weight:600">${sign}$${fmt(Math.abs(d.pnl))}</span>
+    </div>`;
+  });
+  const totPos  = totalPnl >= 0;
+  const totSign = totPos ? '+' : '−';
+  const totCls  = totPos ? 'pos' : 'neg';
+  rows.push(`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;margin-top:2px">
+    <span style="color:var(--ink);font-weight:600">Total</span>
+    <span style="color:var(--ink-faint);font-size:11px">${trades.length} trades</span>
+    <span class="val ${totCls}" style="font-size:14px;font-weight:700">${totSign}$${fmt(Math.abs(totalPnl))}</span>
+  </div>`);
+  tbl.innerHTML = rows.join('');
+  card.style.display = '';
+}
+
+// ── Chart fallback helpers ────────────────────────────────────────────────────
+function _showEquityCurveInChart() {
+  const noDataEl = document.getElementById('chart-no-data');
+  if (noDataEl) { noDataEl.style.display = 'flex'; }
+  // Use the sma line series to display the equity curve in the main chart pane
+  if (replayState.equityCurve && replayState.equityCurve.length) {
+    sma.setData(replayState.equityCurve);
+    chart.timeScale().fitContent();
+    const titleEl = document.getElementById('chart-title');
+    if (titleEl) titleEl.innerHTML = 'EXP-020 Equity Curve <span>2020–2025 backtest · $100k start</span>';
+    const legendEl = document.getElementById('chart-legend');
+    if (legendEl) legendEl.innerHTML = '<span style="color:var(--ink-faint);font-size:11px">No live bars — showing equity progression from backtest</span>';
+  }
+}
+
+function _hideChartNoData() {
+  const noDataEl = document.getElementById('chart-no-data');
+  if (noDataEl) noDataEl.style.display = 'none';
+  const titleEl = document.getElementById('chart-title');
+  if (titleEl) titleEl.innerHTML = 'XAU/USD · M15 <span>Donchian Breakout</span>';
+  const legendEl = document.getElementById('chart-legend');
+  if (legendEl) legendEl.innerHTML = `
+    <span><i style="background:var(--gold)"></i>SMA 200</span>
+    <span><i style="background:var(--blue)"></i>Donchian 20</span>
+    <span><i style="background:var(--ink-faint)"></i>Trailing stop</span>`;
+  // If sma was used to show equity curve, clear it when returning to live view
+  if (!barsLoaded) { try { sma.setData([]); dUp.setData([]); dLo.setData([]); } catch(_){} }
+}
+
 // ── Mode switch ─────────────────────────────────────────────────────────────
 function setReplayMode(active) {
   viewMode = active ? 'replay' : 'live';
@@ -1334,6 +1418,7 @@ function setReplayMode(active) {
     renderTrades(replayState.trades, true);
     renderCircuitBreakers(replayState.metrics);
     renderPosition(replayState.openPosition);
+    renderYearByYear(replayState.trades);
     if (replayState.equityCurve && replayState.equityCurve.length) {
       eqLine.setData(replayState.equityCurve);
       eqChart.timeScale().fitContent();
@@ -1342,9 +1427,14 @@ function setReplayMode(active) {
       if (lastEqPt) document.getElementById('eq-now').textContent  = '$' + fmt(lastEqPt.value);
       document.getElementById('eq-peak').textContent = '$' + fmt(peakEqVal);
     }
-    // WP-8: clear live stop lines, then reload 2000 bars to cover the full fixture
-    // date range before placing markers.
+    // REPLAY primary view: always show the equity curve in the main chart area.
+    // The equity curve spans the full backtest period (2020-2025) and is the most
+    // relevant visualisation for reviewing the deployment backtest.
     _clearPositionLines();
+    _showEquityCurveInChart();
+    updateChartMarkers();
+    // Additionally fetch bars to enable the trade scrubber.
+    // Only use them if they cover the backtest trade period; recent-only bars are useless.
     fetch('/api/bars?symbol=XAU_USD&granularity=M15&count=4500')
       .then(r => r.json()).then(json => {
         const bars = (json.bars || []).map(b => ({
@@ -1354,20 +1444,33 @@ function setReplayMode(active) {
             : (typeof b.time === 'number' && b.time > 1e10)
               ? Math.floor(b.time / 1000) : b.time,
         }));
-        if (!bars.length) { updateChartMarkers(); return; }
-        candles.setData(bars);
-        const smaData = smaSeries(bars, 200);
-        sma.setData(smaData);
-        dUp.setData(donchian(bars, 20, true));
-        dLo.setData(donchian(bars, 20, false));
-        _setRegimeData(bars, smaData);
-        chart.timeScale().fitContent();
-        last = { ...bars[bars.length - 1] };
-        barsLoaded = true;
-        _initScrubBars(bars);   // WP-9: pre-compute indicator states for scrubber
-        updateChartMarkers();
-      }).catch(() => updateChartMarkers());
+        if (!bars.length) return;
+        // Check if bars cover at least some of the backtest trade period
+        const firstTradeTs = replayState.trades && replayState.trades.length
+          ? Math.floor(new Date(replayState.trades[0].entry_time).getTime() / 1000) : Infinity;
+        if (bars[0].time < firstTradeTs) {
+          // Bars have historical coverage — show candles with SMA/Donchian + scrubber
+          _hideChartNoData();
+          candles.setData(bars);
+          const smaData = smaSeries(bars, 200);
+          sma.setData(smaData);
+          dUp.setData(donchian(bars, 20, true));
+          dLo.setData(donchian(bars, 20, false));
+          _setRegimeData(bars, smaData);
+          chart.timeScale().fitContent();
+          last = { ...bars[bars.length - 1] };
+          barsLoaded = true;
+          _initScrubBars(bars);
+          updateChartMarkers();
+          const titleEl = document.getElementById('chart-title');
+          if (titleEl) titleEl.innerHTML = 'XAU/USD · M15 <span>EXP-020 backtest trades</span>';
+        }
+        // else: bars are recent-only, equity curve is already showing — nothing to do
+      }).catch(() => {});
   } else {
+    const ycEl = document.getElementById('yearly-card');
+    if (ycEl) ycEl.style.display = 'none';
+    _hideChartNoData();
     renderMetrics(liveState.metrics, false);
     renderTrades(liveState.trades, false);
     renderCircuitBreakers(liveState.metrics);
@@ -1410,6 +1513,8 @@ fetch('/api/replay').then(r => r.json()).then(data => {
       : `${trades.length} backtest trades loaded`;
     btn.title = label;
   }
+  // Populate scrubber select immediately — doesn't need bars
+  _scrubPopulateSelect();
 }).catch(() => {});
 
 /* ============================================================
@@ -1653,6 +1758,8 @@ async function loadBars() {
 loadBars().then(bars => {
   if (!bars || bars.length === 0) {
     console.error('[chart] loadBars returned empty — check /api/bars');
+    const nd = document.getElementById('chart-no-data');
+    if (nd) { nd.style.display = 'flex'; nd.querySelector('div').innerHTML = 'No live bar data<br><span style="font-size:11px;opacity:.6">Set TWELVE_DATA_API_KEY in .env to load the candlestick chart</span>'; }
     return;
   }
   console.log('[chart] loaded', bars.length, 'bars, first:', bars[0], 'last:', bars[bars.length - 1]);
@@ -2362,7 +2469,20 @@ function _scrubPopulateSelect() {
 
 // ── Select a trade and set up the slider ─────────────────────────────────────
 function _scrubSelectTrade(i) {
-  if (i < 0 || !replayState.trades || !_scrubBars) return;
+  if (i < 0 || !replayState.trades) return;
+  if (!_scrubBars) {
+    // No bars loaded — show trade summary info without chart navigation
+    const t = replayState.trades[i];
+    if (!t) return;
+    const rStr  = t.r_multiple != null ? `${t.r_multiple >= 0 ? '+' : ''}${t.r_multiple.toFixed(2)}R` : '';
+    const pnlTx = (t.pnl >= 0 ? '+' : '−') + '$' + fmt(Math.abs(t.pnl));
+    const entry = new Date(t.entry_time).toLocaleString('en-GB', {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'UTC'});
+    const exit  = new Date(t.exit_time).toLocaleString('en-GB',  {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'UTC'});
+    document.getElementById('scrub-ts').textContent     = `${entry} → ${exit}`;
+    document.getElementById('scrub-rbadge').textContent = rStr || pnlTx;
+    document.getElementById('scrub-rbadge').className   = 'scrub-rbadge ' + ((t.pnl ?? 0) >= 0 ? 'bull' : 'bear');
+    return;
+  }
   scrubPause();
   _scrubTrade = replayState.trades[i];
 
