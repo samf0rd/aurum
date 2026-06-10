@@ -108,9 +108,10 @@ class TradingOrchestrator:
             logger.warning("prewarm_bars_failed", exc_info=exc)
 
         price_interval = int(os.environ.get("PRICE_TICK_INTERVAL", "300"))
+        bar_interval   = int(os.environ.get("BAR_POLL_INTERVAL", str(ACTIVE_PROFILE.bar_seconds)))
         await asyncio.gather(
             self._price_loop(interval=price_interval),
-            self._bar_loop(interval=60),
+            self._bar_loop(interval=bar_interval),
             self._daily_reset_loop(),
         )
 
@@ -349,9 +350,10 @@ class TradingOrchestrator:
 
     async def _bar_loop(self, interval: int) -> None:
         """
-        Polls for new completed H1 bars every `interval` seconds.
+        Polls for new completed bars every `interval` seconds.
         Only runs the strategy pipeline when the most recent bar timestamp changes.
         """
+        import time as _time
         while True:
             try:
                 bars = await self._feed.get_bars(
@@ -360,6 +362,24 @@ class TradingOrchestrator:
                     include_incomplete=False,
                 )
                 if bars:
+                    # Cache serialised bars for the dashboard chart (/api/bars fallback)
+                    if self._state is not None:
+                        from datetime import timezone as _tz
+                        serialised = []
+                        for b in bars:
+                            ts = b.timestamp
+                            if ts.tzinfo is None:
+                                ts = ts.replace(tzinfo=_tz.utc)
+                            serialised.append({
+                                "time":  int(ts.timestamp()),
+                                "open":  round(float(b.open),  2),
+                                "high":  round(float(b.high),  2),
+                                "low":   round(float(b.low),   2),
+                                "close": round(float(b.close), 2),
+                            })
+                        self._state.last_bars    = serialised
+                        self._state.last_bars_ts = _time.time()
+
                     latest = bars[-1]
                     if latest.timestamp != self._last_bar_time:
                         self._last_bar_time = latest.timestamp

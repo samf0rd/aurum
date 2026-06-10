@@ -171,8 +171,10 @@ def build_app(state: SystemState, data_feed=None, risk_config=None) -> FastAPI:
         candidates = sorted(_glob.glob("validation_*.json"), reverse=True)
         if not candidates:
             for candidate in [
-                Path("../validation_swing.json"),
-                Path(__file__).parents[3] / "validation_swing.json",
+                Path("validation_report.json"),
+                Path("../validation_report.json"),
+                Path(__file__).parents[2] / "validation_report.json",
+                Path(__file__).parents[3] / "validation_report.json",
             ]:
                 if candidate.exists():
                     return json.loads(candidate.read_text(encoding="utf-8"))
@@ -233,13 +235,29 @@ def build_app(state: SystemState, data_feed=None, risk_config=None) -> FastAPI:
 
     @app.get("/api/bars")
     async def bars_endpoint(symbol: str = "XAU_USD", granularity: str = "H1", count: int = 250):
-        """Return the last `count` OHLCV bars for the candlestick chart."""
+        """Return the last `count` OHLCV bars for the candlestick chart.
+
+        Falls back to the orchestrator's cached bars (state.last_bars) when the
+        live Twelve Data fetch fails — prevents the chart going blank due to
+        transient API errors or intra-day rate-limit exhaustion.
+        """
+        def _cached() -> list[dict]:
+            if _state is not None and _state.last_bars:
+                return _state.last_bars[-count:]
+            return []
+
         if _data_feed is None:
-            return {"bars": []}
+            return {"bars": _cached()}
         try:
             raw = await _data_feed.get_bars(granularity=granularity, count=count)
         except Exception:
             _log.exception("api_bars_failed symbol=%s granularity=%s count=%d", symbol, granularity, count)
+            return {"bars": _cached()}
+        if not raw:
+            cached = _cached()
+            if cached:
+                _log.warning("api_bars_empty_live_using_cache count=%d", len(cached))
+                return {"bars": cached}
             return {"bars": []}
         result = []
         for b in raw:
@@ -253,6 +271,11 @@ def build_app(state: SystemState, data_feed=None, risk_config=None) -> FastAPI:
                 "low":   round(float(b.low),   2),
                 "close": round(float(b.close), 2),
             })
+        # Keep state cache warm from dashboard fetches too
+        if result and _state is not None:
+            import time as _time
+            _state.last_bars    = result
+            _state.last_bars_ts = _time.time()
         return {"bars": result}
 
     @app.get("/api/indicators")

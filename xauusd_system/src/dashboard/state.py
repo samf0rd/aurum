@@ -45,6 +45,9 @@ class SystemState:
         self.last_bar_eval_ts: str = ""
         # Live forming H1 candle — updated each price tick for the chart
         self.forming_candle: dict = {}
+        # Last fetched OHLCV bars for the chart — shared with /api/bars as a cache
+        self.last_bars: list[dict] = []
+        self.last_bars_ts: float = 0.0
         Path("logs").mkdir(exist_ok=True)
 
     def record_equity(self, equity: float) -> None:

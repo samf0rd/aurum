@@ -49,6 +49,8 @@ COPY src/ ./src/
 COPY config/ ./config/
 # Deployment backtest — required for dashboard REPLAY tab
 COPY results/exp-020.json ./results/exp-020.json
+# Validation report — required for dashboard STRATEGY tab
+COPY validation_report.json ./validation_report.json
 
 # Logs directory owned by non-root user
 RUN mkdir -p /app/logs /app/data && chown -R trader:trader /app/logs /app/data
